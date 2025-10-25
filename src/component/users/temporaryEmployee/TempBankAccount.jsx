@@ -5,7 +5,6 @@ import { IoPeopleOutline } from "react-icons/io5";
 import { CiCircleCheck } from "react-icons/ci";
 import { Eye, Upload, X } from "lucide-react";
 
-// সাধারণ Button কম্পোনেন্ট বানালাম
 const Button = ({ type = "button", className, onClick, children }) => (
   <button
     type={type}
@@ -21,11 +20,13 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
   const [depositType, setDepositType] = useState("");
   const [selectedPercentage, setSelectedPercentage] = useState(0);
   const [files, setFiles] = useState([]); // uploaded files state
-  const [selectedPDF, setSelectedPDF] = useState(null); // modal pdf state for full view
-  const [preview, setPreview] = useState(null); // For Signature preview
-
-  // File upload state
+  const [selectedPDF, setSelectedPDF] = useState(null); // modal pdf state
+  const [signaturePreview, setSignaturePreview] = useState(null); // signature preview
   const [isDragOver, setIsDragOver] = useState(false);
+  const [accountData, setAccountData] = useState({
+    checkingAccount: null,
+    savingsAccount: null,
+  }); // Store checking and savings data
 
   const totalSteps = 12;
 
@@ -36,98 +37,25 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
     setValue,
     getValues,
     trigger,
+    reset,
   } = useForm({
     defaultValues: {
       documents: null,
+      employeeSignature: null,
+      bankName: "",
+      state: "",
+      depositType: "",
+      depositPercentage: "",
+      transitNo: "",
+      accountNo: "",
+      secondBankName: "",
+      savingsTransitNo: "",
+      savingsAccountNo: "",
+      signDate: "",
     },
   });
 
-  // Next button এর জন্য function
-  const handleNext = async () => {
-    // Choose which fields to validate based on selected account
-    let fieldsToValidate = [];
-
-    if (selectedAccount === "checking") {
-      // Validate depositType is selected
-      if (!depositType) {
-        alert("Please select a deposit type");
-        return;
-      }
-
-      // Validate files are uploaded
-      if (files.length === 0) {
-        alert("Please upload at least one document");
-        return;
-      }
-
-      // Set documents value before validation
-      setValue("documents", files, { shouldValidate: false });
-
-      fieldsToValidate = [
-        "bankName",
-        "depositType",
-        "depositPercentage",
-        "transitNo",
-        "accountNo",
-        "documents",
-        "employeeSignature",
-        "signDate",
-      ];
-    } else if (selectedAccount === "savings") {
-      fieldsToValidate = [
-        "secondBankName",
-        "savingsTransitNo",
-        "savingsAccountNo",
-        "employeeSignature",
-        "signDate",
-      ];
-    }
-
-    // Validate only those fields
-    const result = await trigger(fieldsToValidate);
-
-    if (result) {
-      const allData = getValues();
-      console.log("✅ Form Data:", allData.documents);
-
-      setFormData((prev) => ({
-        ...prev,
-        bankForm: {
-          name: `${allData.firstName || ""} ${allData.lastName || ""}`.trim(),
-          ssn: allData.ssn,
-          checkingAccount: {
-            bankName: allData.bankName,
-            state: allData.state,
-            transitNo: allData.transitNo,
-            accountNo: allData.accountNo,
-            depositAmount: depositType === "full" ? 0 : undefined,
-            depositPercentage:
-              depositType === "partial" ? Number(selectedPercentage) : 100,
-            accountType: "Checking",
-          },
-          savingsAccount: {
-            bankName: allData.secondBankName,
-            transitNo: allData.savingsTransitNo,
-            accountNo: allData.savingsAccountNo,
-            depositPercentage:
-              depositType === "full"
-                ? 0
-                : depositType === "partial"
-                ? 100 - Number(selectedPercentage)
-                : 0,
-            accountType: "Savings",
-          },
-          signatureDate: allData.signDate,
-        },
-      }));
-
-      nextStep();
-    } else {
-      console.log("❌ Validation errors:", errors);
-    }
-  };
-
-  // Drag drop handlers
+  // File upload handlers
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -138,40 +66,144 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    const updatedFiles = [...files, ...droppedFiles];
-    setFiles(updatedFiles);
-    setValue("documents", updatedFiles, { shouldValidate: true });
-  };
+  const handleDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const droppedFiles = Array.from(e.dataTransfer.files);
+      const validFiles = droppedFiles.filter((file) =>
+        ["image/jpeg", "image/png", "application/pdf"].includes(file.type)
+      );
+
+      if (validFiles.length > 0) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(validFiles[0]); // Only take the first valid file
+        setFiles([validFiles[0]]);
+        setValue("documents", dataTransfer.files, { shouldValidate: true });
+      }
+    },
+    [setValue]
+  );
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files);
-    setFiles(selectedFiles);
-    setValue("documents", selectedFiles, { shouldValidate: true });
-  };
+    const validFiles = selectedFiles.filter((file) =>
+      ["image/jpeg", "image/png", "application/pdf"].includes(file.type)
+    );
 
-  // Remove file handler
-  const handleRemoveFile = (index) => {
-    const updatedFiles = files.filter((_, i) => i !== index);
-    setFiles(updatedFiles);
-    setValue("documents", updatedFiles, { shouldValidate: true });
-  };
-
-  // Signature preview handler
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setPreview(URL.createObjectURL(file));
+    if (validFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(validFiles[0]); // Only take the first valid file
+      setFiles([validFiles[0]]);
+      setValue("documents", dataTransfer.files, { shouldValidate: true });
     }
   };
 
-  // For removing the selected signature image
-  const handleRemoveImage = () => {
-    setPreview(null);
-    setValue("employeeSignature", null);
+  const handleRemoveFile = () => {
+    setFiles([]);
+    setValue("documents", null, { shouldValidate: true });
+  };
+
+  const handleSignatureUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      setSignaturePreview(URL.createObjectURL(file));
+      setValue("employeeSignature", dataTransfer.files, {
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const handleRemoveSignature = () => {
+    setSignaturePreview(null);
+    setValue("employeeSignature", null, { shouldValidate: true });
+  };
+
+  // Handle form submission
+  const handleNext = async () => {
+    const result = await trigger();
+    if (result) {
+      const allData = getValues();
+      let updatedAccountData;
+
+      if (selectedAccount === "checking") {
+        updatedAccountData = {
+          ...accountData,
+          checkingAccount: {
+            accountType: "Checking",
+            bankName: allData.bankName,
+            state: allData.state,
+            depositType: allData.depositType,
+            depositPercentage: allData.depositPercentage,
+            transitNo: allData.transitNo,
+            accountNo: allData.accountNo,
+            documents: allData.documents[0], // FileList
+            employeeSignature6: allData.employeeSignature[0], // FileList
+            signDate: allData.signDate,
+          },
+        };
+      } else {
+        updatedAccountData = {
+          ...accountData,
+          savingsAccount: {
+            accountType: "Savings",
+            bankName: allData.secondBankName,
+            transitNo: allData.savingsTransitNo,
+            accountNo: allData.savingsAccountNo,
+            depositPercentage:
+              accountData.checking?.depositType === "full"
+                ? 0
+                : accountData.checking?.depositType === "partial"
+                ? 100 - Number(accountData.checking.depositPercentage)
+                : "",
+            employeeSignature7: allData.employeeSignature[0],
+            signatureDate: allData.signDate,
+          },
+        };
+      }
+
+      setAccountData(updatedAccountData);
+
+      // Log the updated account data to console
+      console.log("Collected Account Data:", updatedAccountData);
+
+      // Reset form for the next account type
+      reset({
+        documents: null,
+        employeeSignature: null,
+        bankName: "",
+        state: "",
+        depositType: "",
+        depositPercentage: "",
+        transitNo: "",
+        accountNo: "",
+        secondBankName: "",
+        savingsTransitNo: "",
+        savingsAccountNo: "",
+        signDate: "",
+      });
+      setFiles([]);
+      setSignaturePreview(null);
+      setDepositType("");
+      setSelectedPercentage(0);
+
+      // If checking data is collected, allow switching to savings
+      if (selectedAccount === "checking") {
+        setSelectedAccount("savings");
+      } else if (selectedAccount === "savings") {
+        // If both checking and savings data are collected, proceed to next step
+        if (updatedAccountData.checking) {
+          setFormData(updatedAccountData); // Pass combined data to parent
+          nextStep();
+        } else {
+          setSelectedAccount("checking"); // Go back to checking if not filled
+        }
+      }
+    } else {
+      console.log("❌ Validation errors:", errors);
+    }
   };
 
   const inputWrapperClass =
@@ -206,7 +238,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
         </div>
 
         {/* Account Type Buttons */}
-        <p className="text-[40px] font-bold text-center mt-12 ">
+        <p className="text-[40px] font-bold text-center mt-12">
           Select Bank Account Type
         </p>
         <p className="text-red-600 mb-14 text-center text-lg font-medium">
@@ -261,10 +293,9 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                 : "Savings Account Details"}
             </header>
 
-            {/* === Checking Account First 6 Fields === */}
+            {/* === Checking Account Fields === */}
             {selectedAccount === "checking" && (
               <>
-                {/* First 6 inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
                   <div>
                     <label className="text-white mb-1 block">
@@ -296,15 +327,9 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         className={inputClass}
                       />
                     </div>
-                    {errors.lastName && (
-                      <p className="text-red-500 text-sm">
-                        {errors.lastName.message}
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                {/* Deposit Type and Percentage */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-white mb-1 block">
@@ -324,7 +349,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         <option value="partial">Partial Pay Check</option>
                       </select>
                     </div>
-
                     {errors.depositType && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.depositType.message}
@@ -376,7 +400,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         />
                       )}
                     </div>
-
                     {errors.depositPercentage && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.depositPercentage.message}
@@ -385,7 +408,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                   </div>
                 </div>
 
-                {/* Transit/ABA and Account No */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="text-white mb-1 block">
@@ -401,7 +423,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         className={inputClass}
                       />
                     </div>
-
                     {errors.transitNo && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.transitNo.message}
@@ -423,7 +444,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         className={inputClass}
                       />
                     </div>
-
                     {errors.accountNo && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.accountNo.message}
@@ -432,7 +452,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                   </div>
                 </div>
 
-                {/* File Upload Box */}
+                {/* File Upload Section */}
                 <div className="mb-6">
                   <h2 className="text-lg font-medium mb-2">
                     Add Documents (Direct Deposit Form / Voided Check){" "}
@@ -450,7 +470,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     onDrop={handleDrop}
                   >
                     <Upload className="w-8 h-8 text-[#8D6851] mx-auto mb-4" />
-                    <p className="mb-4">Drag and drop files or browse</p>
+                    <p className="mb-4">Drag and drop a file or browse</p>
                     <Button
                       type="button"
                       className="bg-[#8D6851] hover:bg-amber-800 text-white"
@@ -463,15 +483,8 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     <input
                       id="file-input"
                       type="file"
-                      multiple
                       accept=".jpg,.jpeg,.png,.pdf"
                       className="hidden"
-                      {...register("documents", {
-                        required: "Please select at least one document",
-                        validate: () =>
-                          files.length > 0 ||
-                          "Please select at least one document",
-                      })}
                       onChange={handleFileSelect}
                     />
                   </div>
@@ -489,16 +502,14 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                             key={index}
                             className="relative border rounded-md p-2 bg-white shadow-md"
                           >
-                            {/* Cross Button */}
                             <button
                               type="button"
-                              onClick={() => handleRemoveFile(index)}
+                              onClick={handleRemoveFile}
                               className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
                             >
                               <X size={14} />
                             </button>
 
-                            {/* Image Preview */}
                             {isImage && (
                               <img
                                 src={fileURL}
@@ -506,7 +517,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                                 className="w-full h-32 object-contain rounded-md"
                               />
                             )}
-                            {/* PDF Preview */}
+
                             {isPDF && (
                               <div
                                 className="w-full h-32 border rounded-md relative cursor-pointer hover:bg-gray-50"
@@ -515,7 +526,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                                 <iframe
                                   src={fileURL}
                                   title={file.name}
-                                  className="w-full h-full transform scale-90 origin-top-left"
+                                  className="w-full h-full transform scale-90 origin-top-left pointer-events-none"
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                                   <p className="text-black text-xl font-semibold flex items-center gap-3 bg-gray-300 p-3 rounded-md">
@@ -525,7 +536,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                               </div>
                             )}
 
-                            {/* File Name */}
                             <p className="text-xs mt-2 truncate">{file.name}</p>
                           </div>
                         );
@@ -542,7 +552,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
               </>
             )}
 
-            {/* === Savings Account Last 4 Fields === */}
+            {/* === Savings Account Fields === */}
             {selectedAccount === "savings" && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
@@ -560,7 +570,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         className={inputClass}
                       />
                     </div>
-
                     {errors.secondBankName && (
                       <p className="text-red-500 text-sm mt-1">
                         {errors.secondBankName.message}
@@ -577,10 +586,11 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                       <input
                         type="number"
                         value={
-                          depositType === "full"
+                          accountData.checking?.depositType === "full"
                             ? 0
-                            : depositType === "partial"
-                            ? 100 - selectedPercentage
+                            : accountData.checking?.depositType === "partial"
+                            ? 100 -
+                              Number(accountData.checking?.depositPercentage)
                             : ""
                         }
                         readOnly
@@ -641,38 +651,33 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
               <div className="mb-6">
                 <label className="text-white block mb-3">
                   Upload Employee Signature{" "}
-                  <span className="text-red-500">*</span>{" "}
+                  <span className="text-red-500">*</span>
                 </label>
 
-                {/* Upload Button Hide যদি preview থাকে */}
-                {!preview && (
+                {!signaturePreview && (
                   <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
                     <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
                       <span className="text-center">Upload Signature</span>
                       <input
                         type="file"
                         accept="image/*"
-                        {...register("employeeSignature", {
-                          required: "Signature is required",
-                        })}
-                        onChange={handleFileChange}
+                        onChange={handleSignatureUpload}
                         className="hidden"
                       />
                     </label>
                   </div>
                 )}
 
-                {/* Image Preview with Cross */}
-                {preview && (
+                {signaturePreview && (
                   <div className="mt-3 relative inline-block">
                     <img
-                      src={preview}
+                      src={signaturePreview}
                       alt="Signature Preview"
                       className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
                     <button
                       type="button"
-                      onClick={handleRemoveImage}
+                      onClick={handleRemoveSignature}
                       className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
                     >
                       <X size={14} />
@@ -697,7 +702,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     className={`${inputClass} py-3.5`}
                   />
                 </div>
-
                 {errors.signDate && (
                   <p className="text-red-500 text-sm mt-1">
                     {errors.signDate.message}
@@ -712,7 +716,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
         {selectedPDF && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white w-11/12 h-5/6 rounded-lg shadow-lg relative">
-              {/* Close Button */}
               <button
                 onClick={() => setSelectedPDF(null)}
                 className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"

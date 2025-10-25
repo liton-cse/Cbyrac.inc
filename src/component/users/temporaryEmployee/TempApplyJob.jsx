@@ -21,7 +21,7 @@ import { X, XIcon } from "lucide-react";
 const TempApplyJob = () => {
   const [step, setStep] = useState(1); // track current step
   const [preview, setPreview] = useState(null); // For Signature preview
-  const totalSteps = 11; // total number of steps for progress bar
+  const totalSteps = 12; // total number of steps for progress bar
   const [formData, setFormData] = useState({
     generalInfo: {},
     employeeInfo: {},
@@ -161,6 +161,8 @@ const TempApplyJob = () => {
   console.log("Injure Data", formData.accidentProcedure);
   console.log("Submital policy", formData.submittalPolicy);
   console.log("BankData", formData.bankForm);
+  console.log("I9FormData", formData.i9Form);
+  console.log("W4FormData", formData.w4Form);
   // Signature preview handler
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -1020,7 +1022,7 @@ const TempApplyJob = () => {
           onSubmit={onSubmit}
         />
       )} */}
-      {step === 2 && (
+      {/* {step === 2 && (
         <TempBankAccount
           register={register}
           errors={errors}
@@ -1031,8 +1033,8 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )}
-      {step === 3 && (
+      )} */}
+      {/* {step === 2 && (
         <TempI9Form
           register={register}
           errors={errors}
@@ -1044,7 +1046,7 @@ const TempApplyJob = () => {
           onSubmit={onSubmit}
         />
       )}
-      {step === 11 && (
+      {step === 3 && (
         <TempW4Form
           register={register}
           errors={errors}
@@ -1055,13 +1057,14 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )}
-      {step === 12 && (
+      )} */}
+      {step === 2 && (
         <TempSelectCitizenShip
           register={register}
           errors={errors}
           prevStep={prevStep}
           nextStep={nextStep}
+          setFormData={setFormData}
           step={step}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}

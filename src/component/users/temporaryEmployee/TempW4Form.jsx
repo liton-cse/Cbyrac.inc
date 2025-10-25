@@ -1,20 +1,72 @@
 import { useForm } from "react-hook-form";
 import ProgressBar from "../../progressBar/ProgressBar";
+import { useState } from "react";
+import { X } from "lucide-react";
 
-const TempW4Form = ({ prevStep, nextStep, step }) => {
+const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
   const totalSteps = 12;
 
   const {
     register,
     handleSubmit,
+    trigger,
+    getValues,
+    setValue,
     // watch,
     formState: { errors },
   } = useForm({});
 
+  const [preview, setPreview] = useState(null);
   // Handle Next button
-  const handleNext = (data) => {
-    console.log("W4 Form Data:", data);
-    nextStep();
+  const handleNext = async () => {
+    const result = await trigger();
+    if (result) {
+      const data = getValues();
+      const formData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        middleName: data.middleName,
+        address: data.address,
+        ssn: data.ssn,
+        maritalStatus: data.maritalStatus,
+        employeeSignature: data.employeeSignature?.[0], // optional File
+        signatureDate: data.signDate,
+        qualifyingChildren: data.qualifyingChildren,
+        amount: data.otherIncome,
+        childrenDepencyNo: data.childTaxCredit,
+        TotalDependencyAmount: data.dependentCredit,
+        extraWithHoldingAmount: data.otherDependents,
+        acceptedTerms: data.twoJobs || false,
+      };
+
+      console.log(formData);
+
+      setFormData((prev) => ({
+        ...prev,
+        i9Form: formData,
+      }));
+      setPreview(null); // clear signature preview
+      nextStep();
+    } else {
+    }
+  };
+
+  // Signature handlers
+  const handleSignatureUpload = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type.startsWith("image/")) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      setPreview(URL.createObjectURL(file));
+      setValue("employeeSignature", dataTransfer.files, {
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const handleRemoveSignature = () => {
+    setPreview(null);
+    setValue("employeeSignature", null, { shouldValidate: true });
   };
 
   const inputWrapperClass =
@@ -54,10 +106,7 @@ const TempW4Form = ({ prevStep, nextStep, step }) => {
           {/* Step 1 Info */}
           <p className="text-[32px] font-bold mt-8">Step 1:</p>
           <div className="border-2 w-32 mb-5"></div>
-          <form
-            onSubmit={handleSubmit(handleNext)}
-            className="rounded-2xl max-w-7xl mx-auto"
-          >
+          <form onSubmit={handleNext} className="rounded-2xl max-w-7xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
                 <label className="text-white mb-2  block">
@@ -67,7 +116,7 @@ const TempW4Form = ({ prevStep, nextStep, step }) => {
                   <input
                     type="text"
                     placeholder="Enter Full Name"
-                    {...register("fullName", {
+                    {...register("firstName", {
                       required: "Full name is required",
                     })}
                     className={inputClass}
@@ -118,24 +167,23 @@ const TempW4Form = ({ prevStep, nextStep, step }) => {
                 <label className="text-white mb-2 block">
                   Social Security Number <span className="text-red-500">*</span>
                 </label>
+
                 <div className={inputWrapperClass}>
                   <input
-                    type="text"
+                    type="number"
                     placeholder="XXX-XX-XXXX"
                     {...register("ssn", {
-                      required: "Full SSN is required",
-                      pattern: {
-                        value: /^\d{3}-\d{2}-\d{4}$/,
-                        message: "SSN must be in XXX-XX-XXXX format",
-                      },
+                      required: "Social Security Number is required",
                     })}
                     className={inputClass}
                   />
                 </div>
+
                 {errors.ssn && (
                   <p className="text-red-500 text-sm">{errors.ssn.message}</p>
                 )}
               </div>
+
               <div>
                 <label className="text-white mb-2  block">
                   Address <span className="text-red-500">*</span>
@@ -368,19 +416,39 @@ const TempW4Form = ({ prevStep, nextStep, step }) => {
                 <label className="block mb-2">
                   Employee Signature <span className="text-red-500">*</span>
                 </label>
-                <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                  <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                    <span className="text-center">Upload Signature</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      {...register("employeeSignature", {
-                        required: "Signature is required",
-                      })}
-                      className="hidden"
+
+                {!preview ? (
+                  <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
+                    <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
+                      <span className="text-center">Upload Signature</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        {...register("employeeSignature", {
+                          required: "Signature is required",
+                          onChange: handleSignatureUpload,
+                        })}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={preview}
+                      alt="Signature Preview"
+                      className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
-                  </label>
-                </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveSignature}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+
                 {errors.employeeSignature && (
                   <p className="text-red-500 text-sm">
                     {errors.employeeSignature.message}
