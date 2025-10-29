@@ -6,19 +6,17 @@ import { getEmployees } from "../../../redux/feature/tempEmployee/tempEmployeeSl
 
 const PdfViewer = () => {
   //   const [employee, setemployee] = useState({});
-  const location = useLocation();
   const dispatch = useDispatch();
-  const { employee, status } = useSelector((state) => state.tempEmployee);
-  //   const { employee } = location.state || {};
-  console.log(employee);
-  useEffect(() => {
-    console.log("liton");
-    dispatch(getEmployees());
-  }, []);
+  const { employees, status } = useSelector((state) => state.tempEmployee);
 
-  const handlePrint = () => {
-    window.print();
-  };
+  useEffect(() => {
+    console.log("PdfViewer useEffect triggered");
+    dispatch(getEmployees());
+  }, [dispatch]);
+  console.log(employees);
+  if (!employees) {
+    return <div>Loading...</div>;
+  }
 
   const handleDownloadPDF = () => {
     // Use browser's print to PDF feature
@@ -102,19 +100,19 @@ const PdfViewer = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Last Name:</span>
                   <span className="border-b border-black flex-1 min-w-[180px]">
-                    {employee.generalInfo.lastName || "\u00A0"}
+                    {employee?.generalInfo?.lastName || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">First Name:</span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-[180px]">
-                    {employee.generalInfo.firstName || "\u00A0"}
+                    {employees?.generalInfo?.firstName || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm font-medium">Middle Name:</span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-[150px]">
-                    {employee.generalInfo.middleName || "\u00A0"}
+                    {employees.generalInfo.middleName || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -125,7 +123,7 @@ const PdfViewer = () => {
                     Social Security Number:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.ssn || "\u00A0"}
+                    {employees.generalInfo.ssn || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -133,7 +131,7 @@ const PdfViewer = () => {
                     DOB:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.dateOfBirth || "\u00A0"}
+                    {employees.generalInfo.dateOfBirth || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -144,7 +142,7 @@ const PdfViewer = () => {
                     Telephone Number:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.telephoneNumber || "\u00A0"}
+                    {employees.generalInfo.telephoneNumber || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -152,7 +150,7 @@ const PdfViewer = () => {
                     Email Address:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.emailAddress || "\u00A0"}
+                    {employees.generalInfo.emailAddress || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -181,14 +179,15 @@ const PdfViewer = () => {
                     {/* ✅ Use inline-flex to allow horizontal spacing */}
                     <span className="inline-flex space-x-20">
                       <span>
-                        {employee.generalInfo.emergencyContact.name || "\u00A0"}
-                      </span>
-                      <span>
-                        {employee.generalInfo.emergencyContact.relationship ||
+                        {employees.generalInfo.emergencyContact.name ||
                           "\u00A0"}
                       </span>
                       <span>
-                        {employee.generalInfo.emergencyContact.phone ||
+                        {employees.generalInfo.emergencyContact.relationship ||
+                          "\u00A0"}
+                      </span>
+                      <span>
+                        {employees.generalInfo.emergencyContact.phone ||
                           "\u00A0"}
                       </span>
                     </span>
@@ -210,9 +209,9 @@ const PdfViewer = () => {
                 </span>
                 <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
                   Desired Salary:
-                  {employee.generalInfo.desiredSalary || "\u00A0"}
+                  {employees.generalInfo.desiredSalary || "\u00A0"}
                   {` / `}
-                  Hourly rate :{employee.generalInfo.hourlyRate || "\u00A0"}
+                  Hourly rate :{employees.generalInfo.hourlyRate || "\u00A0"}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -221,7 +220,7 @@ const PdfViewer = () => {
                     Position Applied For:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.appliedPosition || "\u00A0"}
+                    {employees.generalInfo.appliedPosition || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -229,7 +228,7 @@ const PdfViewer = () => {
                     Dept.:
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.department || "\u00A0"}
+                    {employees.generalInfo.department || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -240,7 +239,7 @@ const PdfViewer = () => {
                     you can start work if hired
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.startDate || "\u00A0"}
+                    {employees.generalInfo.startDate || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -418,14 +417,14 @@ const PdfViewer = () => {
                   <span className="font-medium">Employer 1</span>
                   <br />
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employeeInfo.employee1?.name || "\u00A0"}
+                    {employees.employeeInfo.employee1?.name || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Name</span>
                 </div>
                 <div className="mt-6">
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employeeInfo?.employee1?.address || "\u00A0"}
+                    {employees.employeeInfo?.employee1?.address || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Address</span>
@@ -438,20 +437,21 @@ const PdfViewer = () => {
                     Telephone (____)
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {employee.employeeInfo.employee1?.telephone || "\u00A0"}
+                    {employees.employeeInfo.employee1?.telephone || "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     Dates Employed From
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee1.dateEmployeeFrom ||
+                    {employees.employeeInfo.employee1.dateEmployeeFrom ||
                       "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     To
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee1.dateEmployeeTo || "\u00A0"}
+                    {employees.employeeInfo.employee1.dateEmployeeTo ||
+                      "\u00A0"}
                   </span>
                 </div>
 
@@ -460,13 +460,13 @@ const PdfViewer = () => {
                     Job Title
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employeeInfo?.employee1.jobTitle || "\u00A0"}
+                    {employees.employeeInfo?.employee1.jobTitle || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Duties
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee1.duties || "\u00A0"}
+                    {employees.employeeInfo.employee1.duties || "\u00A0"}
                   </span>
                 </div>
 
@@ -475,7 +475,7 @@ const PdfViewer = () => {
                     Supervisor's Name
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employeeInfo.employee1?.supervisorName ||
+                    {employees.employeeInfo.employee1?.supervisorName ||
                       "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">

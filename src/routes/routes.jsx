@@ -90,7 +90,7 @@ const router = createBrowserRouter([
           { index: true, element: <TempApplyJob /> },
           { path: "time-sheet-temp", element: <TimeSheetTemp /> },
           { path: "payroll-calendar", element: <TempPayrollCalender /> },
-          { path: "/temporary-employee/view-pdf", element: <PdfViewer /> },
+          { path: "view-pdf", element: <PdfViewer /> },
         ],
       },
     ],

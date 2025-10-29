@@ -233,7 +233,7 @@ const TempApplyJob = () => {
       );
       const result = response.data.data;
       setPdfData(result);
-      navigate("/view-pdf", { state: { result } });
+      navigate("view-pdf", { state: { result } });
       // console.log(result);
       // setStep(1);
     } catch (error) {

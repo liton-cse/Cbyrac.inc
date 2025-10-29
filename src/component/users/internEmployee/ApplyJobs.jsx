@@ -894,7 +894,8 @@ const ApplyJobs = () => {
 
       // Submit to your API
       const response = await fetch(
-        "http://10.10.7.102:8000/api/v1/internForm/intern",
+        // "http://10.10.7.102:8000/api/v1/internForm/intern",
+        `${import.meta.env.VITE_BASE_API}/internForm/intern`,
         {
           method: "POST",
           headers: {
