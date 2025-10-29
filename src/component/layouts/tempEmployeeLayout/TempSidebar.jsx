@@ -3,10 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Clock, Calendar, Briefcase, LogOut } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { logout } from "../../../redux/feature/user/userSlice";
+import { useDispatch } from "react-redux";
 
 const TempSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const handleLogOut = () => {
     dispatch(logout());
     navigate("/sign-in");
@@ -30,7 +32,7 @@ const TempSidebar = () => {
       key: "payroll-calendar",
       label: "Payroll Calendar",
       icon: <Calendar className="w-5 h-5" />,
-      path: "/temporary-employee/payroll-calendar",
+      path: "payroll-calendar",
     },
   ];
 

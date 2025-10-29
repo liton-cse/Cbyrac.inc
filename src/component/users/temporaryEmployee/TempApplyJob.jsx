@@ -8,7 +8,7 @@ import WorkExperienceForm from "./WorkExperienceForm";
 import References from "./References";
 import DrivingInfoForm from "./DrivingInfoForm";
 import TermsText from "./TermsText";
-// import OnlyCbyracInc from "./OnlyCbyracInc";
+import OnlyCbyracInc from "./OnlyCbyracInc";
 import CertificationText from "./CertificationText";
 import InjuriesProcedures from "./InjuriesProcedures";
 import AllPolicy from "./AllPolicy";
@@ -17,6 +17,68 @@ import TempI9Form from "./TempI9Form";
 import TempW4Form from "./TempW4Form";
 import TempSelectCitizenShip from "./TempSelectCitizenShip";
 import { X, XIcon } from "lucide-react";
+import { useDispatch } from "react-redux";
+import {
+  addEmployee,
+  setEmployees,
+} from "../../../redux/feature/tempEmployee/tempEmployeeSlice";
+import axiosInstance from "../../../utils/axiosInstance";
+import { useNavigate } from "react-router-dom";
+
+function appendToFormData(data, formData = new FormData(), prefix = "") {
+  for (const [key, value] of Object.entries(data)) {
+    const newPrefix = prefix ? `${prefix}.${key}` : key;
+
+    if (value instanceof File) {
+      let fieldName;
+      if (newPrefix === "citizenShipForm.photoID") {
+        fieldName =
+          value.type === "application/pdf" ? "photoIdPdf" : "photoIdImage";
+      } else if (newPrefix === "citizenShipForm.socialSecurityCard") {
+        fieldName =
+          value.type === "application/pdf"
+            ? "socialSecurityPdf"
+            : "socialSecurityImage";
+      } else if (newPrefix === "citizenShipForm.residentCard") {
+        fieldName =
+          value.type === "application/pdf"
+            ? "residentCardPdf"
+            : "residentCardImage";
+      } else if (newPrefix === "citizenShipForm.workAuthorizationDocument") {
+        fieldName =
+          value.type === "application/pdf"
+            ? "workAuthorizationPdf"
+            : "workAuthorizationImage";
+      } else if (newPrefix.includes("employeeSignature")) {
+        fieldName = key; // e.g., employeeSignature1, employeeSignature2
+      } else if (newPrefix === "bankForm.accountFile") {
+        fieldName =
+          value.type === "application/pdf"
+            ? "directDepositPdf"
+            : "directDepositImage";
+      } else {
+        fieldName = key; // Fallback to flat key
+      }
+      console.log(
+        `Appending file: ${fieldName} - ${value.name} (${value.type})`
+      ); // Debug
+      formData.append(fieldName, value);
+    } else if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        if (typeof item === "object" && item !== null) {
+          appendToFormData(item, formData, `${newPrefix}[${index}]`);
+        } else {
+          formData.append(`[${index}]`, item ?? "");
+        }
+      });
+    } else if (typeof value === "object" && value !== null) {
+      appendToFormData(value, formData, newPrefix);
+    } else {
+      formData.append(newPrefix, value ?? "");
+    }
+  }
+  return formData;
+}
 
 const TempApplyJob = () => {
   const [step, setStep] = useState(1); // track current step
@@ -35,11 +97,13 @@ const TempApplyJob = () => {
     w4Form: {},
     citizenShipForm: {},
   });
+  const [pdfData, setPdfData] = useState({});
+  const navigate = useNavigate();
 
   //previous and next button logic
   const nextStep = () => setStep((prev) => prev + 1);
   const prevStep = () => setStep((prev) => prev - 1);
-
+  const dispatch = useDispatch();
   const {
     register,
     handleSubmit,
@@ -95,7 +159,7 @@ const TempApplyJob = () => {
             education: [
               {
                 level: "High School",
-                schoolName: allData.highSchoolName,
+                name: allData.highSchoolName,
                 major: allData.highSchoolMajor,
                 graduationStatus: allData.highSchoolGraduationStatus,
                 yearsCompleted: allData.highSchoolYears
@@ -105,7 +169,7 @@ const TempApplyJob = () => {
               },
               {
                 level: "College",
-                schoolName: allData.collegeName,
+                name: allData.collegeName,
                 major: allData.collegeMajor,
                 graduationStatus: allData.collegeGraduationStatus,
                 yearsCompleted: allData.collegeYears
@@ -115,7 +179,7 @@ const TempApplyJob = () => {
               },
               {
                 level: "Graduate / Professional",
-                schoolName: allData.graduateSchoolName,
+                name: allData.graduateSchoolName,
                 major: allData.graduateMajor,
                 graduationStatus: allData.graduateGraduationStatus,
                 yearsCompleted: allData.graduateYears
@@ -125,7 +189,7 @@ const TempApplyJob = () => {
               },
               {
                 level: "Trade / Correspondence",
-                schoolName: allData.tradeSchoolName,
+                name: allData.tradeSchoolName,
                 major: allData.tradeMajor,
                 graduationStatus: allData.tradeGraduationStatus,
                 yearsCompleted: allData.tradeYears
@@ -153,16 +217,31 @@ const TempApplyJob = () => {
       console.log("Validation errors:", errors);
     }
   };
-  console.log("Submit temp generalInfo form :", formData.generalInfo);
-  console.log("Submit temp employeeInfo form :", formData.employeeInfo);
-  console.log("Submit temp Driving Liecence:", formData.drivingLicenceInfo);
-  console.log("applicationCartification", formData.applicantCartification);
-  console.log("Application carification", formData.applicationCarification);
-  console.log("Injure Data", formData.accidentProcedure);
-  console.log("Submital policy", formData.submittalPolicy);
-  console.log("BankData", formData.bankForm);
-  console.log("I9FormData", formData.i9Form);
-  console.log("W4FormData", formData.w4Form);
+
+  const handleFinalSubmit = async (updatedData) => {
+    try {
+      console.log("I9FormData", updatedData.i9Form);
+      const formDataInstance = appendToFormData(updatedData);
+      // Log FormData contents for debugging
+      for (const [key, value] of formDataInstance.entries()) {
+        console.log(`${key}:`, value instanceof File ? value.name : value);
+      }
+
+      const response = await axiosInstance.post(
+        "temporaryForm/temporary",
+        formDataInstance
+      );
+      const result = response.data.data;
+      setPdfData(result);
+      navigate("/view-pdf", { state: { result } });
+      // console.log(result);
+      // setStep(1);
+    } catch (error) {
+      console.error("❌ Error submitting form:", error);
+      alert("Error submitting form. Please try again.");
+    }
+  };
+  console.log("Pdf Data", pdfData);
   // Signature preview handler
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -460,8 +539,8 @@ const TempApplyJob = () => {
                       className={inputClass}
                     >
                       <option value="">Select</option>
-                      <option value="intern">Intern</option>
-                      <option value="temp">Temp Employee</option>
+                      <option value="Intern">Intern</option>
+                      <option value="Temporary">Temp Employee</option>
                     </select>
                   </div>
                 </div>
@@ -666,8 +745,8 @@ const TempApplyJob = () => {
                           className="w-full bg-slate-900 text-white px-2 py-1 rounded focus:outline-none"
                         >
                           <option value="">Select</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="notGraduated">Not Graduated</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Not Graduate">Not Graduated</option>
                         </select>
                       </td>
                       <td className="border border-[#8D6851] px-4 py-2">
@@ -715,8 +794,8 @@ const TempApplyJob = () => {
                           className="w-full bg-slate-900 text-white px-2 py-1 rounded focus:outline-none"
                         >
                           <option value="">Select</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="notGraduated">Not Graduated</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Not Graduate">Not Graduated</option>
                         </select>
                       </td>
                       <td className="border border-[#8D6851] px-4 py-2">
@@ -764,8 +843,8 @@ const TempApplyJob = () => {
                           className="w-full bg-slate-900 text-white px-2 py-1 rounded focus:outline-none"
                         >
                           <option value="">Select</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="notGraduated">Not Graduated</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Not Graduate">Not Graduated</option>
                         </select>
                       </td>
                       <td className="border border-[#8D6851] px-4 py-2">
@@ -813,8 +892,8 @@ const TempApplyJob = () => {
                           className="w-full bg-slate-900 text-white px-2 py-1 rounded focus:outline-none"
                         >
                           <option value="">Select</option>
-                          <option value="graduated">Graduated</option>
-                          <option value="notGraduated">Not Graduated</option>
+                          <option value="Graduated">Graduated</option>
+                          <option value="Not Graduate">Not Graduated</option>
                         </select>
                       </td>
                       <td className="border border-[#8D6851] px-4 py-2">
@@ -925,7 +1004,7 @@ const TempApplyJob = () => {
         </div>
       )}
       {/* Future steps can be added here */}
-      {/* {step === 2 && (
+      {step === 2 && (
         <div>
           <WorkExperienceForm
             prevStep={prevStep}
@@ -974,7 +1053,7 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )} */}
+      )}
       {/* {step === 6 && (
         <OnlyCbyracInc
           register={register}
@@ -985,8 +1064,8 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )} */}
-      {/* {step === 6 && (
+      )}  */}
+      {step === 6 && (
         <CertificationText
           register={register}
           errors={errors}
@@ -1021,8 +1100,8 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )} */}
-      {/* {step === 2 && (
+      )}
+      {step === 9 && (
         <TempBankAccount
           register={register}
           errors={errors}
@@ -1033,8 +1112,8 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )} */}
-      {/* {step === 2 && (
+      )}
+      {step === 10 && (
         <TempI9Form
           register={register}
           errors={errors}
@@ -1046,7 +1125,7 @@ const TempApplyJob = () => {
           onSubmit={onSubmit}
         />
       )}
-      {step === 3 && (
+      {step === 11 && (
         <TempW4Form
           register={register}
           errors={errors}
@@ -1057,8 +1136,9 @@ const TempApplyJob = () => {
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
-      )} */}
-      {step === 2 && (
+      )}
+
+      {step === 12 && (
         <TempSelectCitizenShip
           register={register}
           errors={errors}
@@ -1068,6 +1148,7 @@ const TempApplyJob = () => {
           step={step}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
+          handleFinalSubmit={handleFinalSubmit}
         />
       )}
     </div>

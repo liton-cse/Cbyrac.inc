@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { useState } from "react";
 const WorkExperienceForm = ({ prevStep, nextStep, setFormData, step }) => {
   // const [step, setStep] = useState(1);
-  const totalSteps = 11;
+  const totalSteps = 13;
 
   const {
     register,

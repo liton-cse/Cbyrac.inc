@@ -36,7 +36,7 @@ const TermsText = ({ prevStep, nextStep, step, setFormData }) => {
         ...prev,
         applicantCartification: {
           check: allData.applicantCarification.check,
-          employeeSignature3: allData.employeeSignature?.[0],
+          employeeSignature2: allData.employeeSignature?.[0],
           signatureDate: allData.signDate,
         },
       }));

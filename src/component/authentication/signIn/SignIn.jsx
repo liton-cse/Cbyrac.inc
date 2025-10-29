@@ -17,9 +17,10 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     if (userInfo?.token && userInfo?.role === "Fit2Lead Intern") {
-      navigate("/intern");
+      navigate("/");
     } else if (userInfo?.token && userInfo?.role === "Temporary Employee") {
       navigate("/temporary-employee");
+      // navigate("/temporary-employee/view-pdf");
     } else if (userInfo?.token && userInfo?.role === "Administrator") {
       navigate("/admin");
     }

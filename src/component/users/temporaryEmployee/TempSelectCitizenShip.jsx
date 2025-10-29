@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import ProgressBar from "../../progressBar/ProgressBar";
 import { FaHome } from "react-icons/fa";
@@ -16,7 +16,143 @@ const Button = ({ type = "button", className, onClick, children }) => (
   </button>
 );
 
-const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
+// UploadField Component
+const UploadField = ({ label, name, setValue }) => {
+  const [previews, setPreviews] = useState([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const {
+    register,
+    formState: { errors },
+  } = useForm();
+
+  // Clean up URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [previews]);
+
+  const handleFileChange = (files) => {
+    if (files && files.length > 0) {
+      console.log(
+        `${name} files:`,
+        Array.from(files).map((file) => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        }))
+      );
+      setValue(name, files, { shouldValidate: true });
+      const newPreviews = Array.from(files).map((file) => ({
+        url: URL.createObjectURL(file),
+        type: file.type,
+      }));
+      setPreviews(newPreviews);
+      console.log(`${name} new previews:`, newPreviews);
+    } else {
+      console.log(`${name}: No files selected`);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  return (
+    <div className="mt-6">
+      <h1 className="text-lg font-medium text-white mb-2">
+        {label} <span className="text-red-500">*</span>
+      </h1>
+      <div
+        className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+          isDragOver ? "border-[#8D6851] bg-gray-100" : "border-[#8D6851]"
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragOver(false);
+          const files = e.dataTransfer.files;
+          handleFileChange(files);
+        }}
+      >
+        <div className="mb-6">
+          <div className="w-16 h-16 mx-auto bg-[#201925] rounded-lg flex items-center justify-center">
+            <Upload className="w-8 h-8 text-[#8D6851]" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold text-white mb-3">
+          Upload Documents
+        </h2>
+        <p className="text-gray-400 mb-6">
+          Drag and drop files here, or browse
+        </p>
+        <Button
+          type="button"
+          className="bg-[#8D6851] text-white"
+          onClick={() => document.getElementById(name)?.click()}
+        >
+          Choose File
+        </Button>
+        <input
+          id={name}
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,.pdf"
+          className="hidden"
+          {...register(name, {
+            required: `${label} is required`,
+            validate: (files) => files?.length > 0 || `${label} is required`,
+          })}
+          onChange={(e) => handleFileChange(e.target.files)}
+        />
+        <p className="text-sm text-gray-400 mt-2">
+          Supports JPG, PNG, PDF up to 10MB
+        </p>
+      </div>
+      {errors[name] && (
+        <p className="text-red-500 text-sm mt-2">{errors[name].message}</p>
+      )}
+      {previews.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-white mb-2">Previews:</h3>
+          {previews.map((preview, index) => (
+            <div key={index} className="mb-4">
+              {preview.type === "application/pdf" ? (
+                <iframe
+                  src={preview.url}
+                  width="100%"
+                  height="300"
+                  title={`PDF Preview ${index + 1}`}
+                />
+              ) : (
+                <img
+                  src={preview.url}
+                  alt={`Preview ${index + 1}`}
+                  className="max-w-full h-auto"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const TempSelectCitizenShip = ({
+  prevStep,
+  nextStep,
+  step,
+  setFormData,
+  handleFinalSubmit,
+}) => {
   const [selectedJobType, setSelectedJobType] = useState("");
   const totalSteps = 12;
 
@@ -24,7 +160,6 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
     register,
     handleSubmit,
     setValue,
-    trigger,
     getValues,
     formState: { errors },
   } = useForm({
@@ -44,28 +179,63 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
     (type) => {
       setSelectedJobType(type);
       setValue("citizenship", type, { shouldValidate: true });
-      // Clear document fields when switching selection
       setValue("photoId", null, { shouldValidate: true });
       setValue("ssn", null, { shouldValidate: true });
       setValue("residentCard", null, { shouldValidate: true });
       setValue("workAuth", null, { shouldValidate: true });
+      console.log("Form state after handleSelection:", getValues());
     },
-    [setValue]
+    [setValue, getValues]
   );
 
-  // Handle next step navigation with validation
-  const handleNext = async () => {
-    const result = await trigger();
-    if (result) {
-      const data = getValues();
-      console.log("Form Data:", data);
-      nextStep();
-    } else {
-      console.log("❌ Validation errors:", errors);
+  // Handle form submission
+  const onSubmit = (data) => {
+    let citizenshipData;
+
+    switch (data.citizenship) {
+      case "Citizen":
+        citizenshipData = {
+          citizenshipStatus: "citizen",
+          photoID: data.photoId?.[0],
+          socialSecurityCard: data.ssn?.[0],
+        };
+        break;
+
+      case "Resident":
+        citizenshipData = {
+          citizenshipStatus: "resident",
+          photoID: data.photoId?.[0],
+          socialSecurityCard: data.ssn?.[0],
+          residentCard: data.residentCard?.[0],
+        };
+        break;
+
+      case "WorkAuth":
+        citizenshipData = {
+          citizenshipStatus: "workauth",
+          photoID: data.photoId?.[0],
+          socialSecurityCard: data.ssn?.[0],
+          workAuthorizationDocument: data.workAuth,
+        };
+        break;
+
+      default:
+        console.warn("Invalid citizenship type");
     }
+    let updatedData;
+    setFormData((prev) => {
+      updatedData = {
+        ...prev,
+        citizenShipForm: citizenshipData,
+      };
+      console.log("Updated formData:", updatedData);
+      return updatedData;
+    });
+    handleFinalSubmit(updatedData);
+
+    console.log("Processed Citizenship Data:", citizenshipData);
   };
 
-  // Drag-drop handlers
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
     setIsDragOver(true);
@@ -76,118 +246,6 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback(
-    (e, name, setPreviews) => {
-      e.preventDefault();
-      setIsDragOver(false);
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        const dt = new DataTransfer();
-        Array.from(files).forEach((file) => dt.items.add(file));
-        setValue(name, dt.files, { shouldValidate: true });
-        setPreviews(
-          Array.from(files).map((file) => ({
-            url: URL.createObjectURL(file),
-            type: file.type,
-          }))
-        );
-      }
-    },
-    [setValue]
-  );
-
-  const handleFileSelect = (e, name, setPreviews) => {
-    const files = e.target.files;
-    if (files) {
-      setValue(name, files, { shouldValidate: true });
-      setPreviews(
-        Array.from(files).map((file) => ({
-          url: URL.createObjectURL(file),
-          type: file.type,
-        }))
-      );
-    }
-  };
-
-  // Upload Field Component
-  const UploadField = ({ label, name }) => {
-    const [previews, setPreviews] = useState([]);
-
-    return (
-      <div className="mt-6">
-        <h1 className="text-lg font-medium text-white mb-2">
-          {label} <span className="text-red-500">*</span>
-        </h1>
-        <div
-          className={`relative border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-            isDragOver ? "border-[#8D6851] bg-gray-100" : "border-[#8D6851]"
-          }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={(e) => handleDrop(e, name, setPreviews)}
-        >
-          <div className="mb-6">
-            <div className="w-16 h-16 mx-auto bg-[#201925] rounded-lg flex items-center justify-center">
-              <Upload className="w-8 h-8 text-[#8D6851]" />
-            </div>
-          </div>
-          <h2 className="text-xl font-semibold text-white mb-3">
-            Upload Documents
-          </h2>
-          <p className="text-gray-400 mb-6">
-            Drag and drop files here, or browse
-          </p>
-          <Button
-            type="button"
-            className="bg-[#8D6851] text-white"
-            onClick={() => document.getElementById(name)?.click()}
-          >
-            Choose File
-          </Button>
-          <input
-            id={name}
-            type="file"
-            multiple
-            accept=".jpg,.jpeg,.png,.pdf"
-            className="hidden"
-            {...register(name, { required: `${label} is required` })}
-            onChange={(e) => handleFileSelect(e, name, setPreviews)}
-          />
-          <p className="text-sm text-gray-400 mt-2">
-            Supports JPG, PNG, PDF up to 10MB
-          </p>
-        </div>
-        {errors[name] && (
-          <p className="text-red-500 text-sm mt-2">{errors[name].message}</p>
-        )}
-        {/* Preview Section */}
-        {previews.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-white mb-2">Previews:</h3>
-            {previews.map((preview, index) => (
-              <div key={index} className="mb-4">
-                {preview.type === "application/pdf" ? (
-                  <iframe
-                    src={preview.url}
-                    width="100%"
-                    height="300"
-                    title={`PDF Preview ${index + 1}`}
-                  />
-                ) : (
-                  <img
-                    src={preview.url}
-                    alt={`Preview ${index + 1}`}
-                    className="max-w-full h-auto"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Render upload fields based on citizenship selection
   const renderUploadFields = () => {
     if (selectedJobType === "Citizen") {
@@ -196,8 +254,13 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
           <UploadField
             label="Photo I.D. (Driver's License, Passport)"
             name="photoId"
+            setValue={setValue}
           />
-          <UploadField label="Social Security Card" name="ssn" />
+          <UploadField
+            label="Social Security Card"
+            name="ssn"
+            setValue={setValue}
+          />
         </>
       );
     }
@@ -207,9 +270,18 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
           <UploadField
             label="Photo I.D. (Driver's License, Passport)"
             name="photoId"
+            setValue={setValue}
           />
-          <UploadField label="Social Security Card" name="ssn" />
-          <UploadField label="Resident Card" name="residentCard" />
+          <UploadField
+            label="Social Security Card"
+            name="ssn"
+            setValue={setValue}
+          />
+          <UploadField
+            label="Resident Card"
+            name="residentCard"
+            setValue={setValue}
+          />
         </>
       );
     }
@@ -219,11 +291,17 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
           <UploadField
             label="Photo I.D. (Driver's License, Passport)"
             name="photoId"
+            setValue={setValue}
           />
-          <UploadField label="Social Security Card" name="ssn" />
+          <UploadField
+            label="Social Security Card"
+            name="ssn"
+            setValue={setValue}
+          />
           <UploadField
             label="Work Authorization Card/Document"
             name="workAuth"
+            setValue={setValue}
           />
         </>
       );
@@ -258,7 +336,7 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
           <ProgressBar currentStep={step} totalSteps={totalSteps} />
         </div>
 
-        <form onSubmit={handleSubmit(handleNext)}>
+        <form onSubmit={handleSubmit(onSubmit)}>
           <p className="text-[40px] font-bold text-center mt-12 mb-14">
             Select Your Citizenship <span className="text-red-500">*</span>
           </p>
@@ -344,8 +422,7 @@ const TempSelectCitizenShip = ({ prevStep, nextStep, step }) => {
               Previous
             </Button>
             <Button
-              type="button"
-              onClick={handleNext}
+              type="submit"
               className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
             >
               Next

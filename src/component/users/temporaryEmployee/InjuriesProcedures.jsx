@@ -20,7 +20,7 @@ const InjuriesProcedures = ({ prevStep, nextStep, step, setFormData }) => {
       setFormData((prev) => ({
         ...prev,
         accidentProcedure: {
-          employeeSignature5: allData.employeeSignature?.[0],
+          employeeSignature4: allData.employeeSignature?.[0],
           signatureDate: allData.signDate,
         },
       }));

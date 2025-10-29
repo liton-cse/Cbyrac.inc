@@ -29,7 +29,7 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
         address: data.address,
         ssn: data.ssn,
         maritalStatus: data.maritalStatus,
-        employeeSignature: data.employeeSignature?.[0], // optional File
+        employeeSignature8: data.employeeSignature?.[0], // optional File
         signatureDate: data.signDate,
         qualifyingChildren: data.qualifyingChildren,
         amount: data.otherIncome,
@@ -43,7 +43,7 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
 
       setFormData((prev) => ({
         ...prev,
-        i9Form: formData,
+        w4Form: formData,
       }));
       setPreview(null); // clear signature preview
       nextStep();

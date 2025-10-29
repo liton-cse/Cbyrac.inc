@@ -6,6 +6,7 @@ import userFilterReducer from "../feature/overview/userFilterSlice";
 import employeeFilterReducer from "../feature/overview/employeeSlice";
 import adminFormReducer from "../feature/adminForm/adminFormSlice";
 import calendarReducer from "../feature/calendar/calendarSlice";
+import tempEmployeeReducer from "../feature/tempEmployee/tempEmployeeSlice";
 export const store = configureStore({
   reducer: {
     user: userReducer,
@@ -14,6 +15,7 @@ export const store = configureStore({
     employeeFilter: employeeFilterReducer,
     adminForm: adminFormReducer,
     calendar: calendarReducer,
+    tempEmployee: tempEmployeeReducer,
   },
   devTools: import.meta.env.NODE_ENV !== "production",
 });

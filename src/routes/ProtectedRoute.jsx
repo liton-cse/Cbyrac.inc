@@ -2,18 +2,21 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 const ProtectedRoute = ({ allowedRoles }) => {
+  const { userInfo } = useSelector((state) => state.user) || {};
   const token = localStorage.getItem("token");
-  const role = localStorage.getItem("role");
-  const { userInfo } = useSelector((state) => state.user);
+  const role = localStorage.getItem("role") || userInfo?.role;
 
-  if (!token && !role) {
+  // Not logged in
+  if (!token || !role) {
     return <Navigate to="/sign-in" replace />;
   }
-  console.log(userInfo.role);
-  if (!allowedRoles.includes(userInfo?.role)) {
+
+  // Role not allowed
+  if (!allowedRoles.includes(role)) {
     return <Navigate to="/unauthorized" replace />;
   }
 
+  // Render protected routes
   return <Outlet />;
 };
 

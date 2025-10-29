@@ -20,9 +20,9 @@ const DrivingInfoForm = ({ prevStep, nextStep, step, setFormData }) => {
 
     if (result) {
       const allData = getValues();
-
+      console.log("all data", allData);
       setFormData((prev) => {
-        const prevDrivingLicenceInfo = prev.drivingLicenceInfo || {};
+        // const prevDrivingLicenceInfo = prev.drivingLicenceInfo || {};
 
         // Extract values for readability
         const hasValidLicense = allData.hasValidLicense || "No";
@@ -36,7 +36,7 @@ const DrivingInfoForm = ({ prevStep, nextStep, step, setFormData }) => {
             hasDriverLicense: hasValidLicense,
             licenseNo:
               hasValidLicense === "Yes" ? allData.licenseNumber || "" : "",
-            state: hasValidLicense === "Yes" ? allData.licenseState || "" : "",
+            state: allData.licenseState ? allData.licenseState : "",
             expirationDate:
               hasValidLicense === "Yes" ? allData.licenseExpiration || "" : "",
             reason:
@@ -45,7 +45,7 @@ const DrivingInfoForm = ({ prevStep, nextStep, step, setFormData }) => {
 
           licenseSuspensionInfo: {
             licenseSuspendedOrRevoked: licenseSuspended,
-            suspensionExplanation:
+            reason:
               licenseSuspended === "Yes"
                 ? allData.suspensionExplanation || ""
                 : "",
@@ -53,13 +53,13 @@ const DrivingInfoForm = ({ prevStep, nextStep, step, setFormData }) => {
 
           personalAutoInsurance: {
             hasPersonalAutoInsurance: hasAutoInsurance,
-            noInsuranceReason:
+            reason:
               hasAutoInsurance === "No" ? allData.noInsuranceReason || "" : "",
           },
 
           personalAutoInsuranceHistory: {
             insuranceDeniedOrTerminated: insuranceDenied,
-            insuranceExplanation:
+            reason:
               insuranceDenied === "Yes"
                 ? allData.insuranceExplanation || ""
                 : "",
@@ -96,7 +96,7 @@ const DrivingInfoForm = ({ prevStep, nextStep, step, setFormData }) => {
         return {
           ...prev,
           drivingLicenceInfo: {
-            ...prevDrivingLicenceInfo,
+            // ...prevDrivingLicenceInfo,
             ...drivingLicenceInfo,
           },
         };

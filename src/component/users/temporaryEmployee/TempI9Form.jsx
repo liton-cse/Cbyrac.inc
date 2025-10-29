@@ -3,10 +3,10 @@ import { useForm } from "react-hook-form";
 import ProgressBar from "../../progressBar/ProgressBar";
 import { X } from "lucide-react";
 export const I9Status = {
-  Citizen: "citizen",
-  NonCitizen: "noncitizen",
-  Permanent: "permanent",
-  NonCitizen_Other: "noncitizen_other",
+  Citizen: "US Citizen",
+  NonCitizen: "Noncitizen National",
+  Permanent: "Lawful Permanent Resident",
+  NonCitizen_Other: "Other Noncitizen",
 };
 
 const TempI9Form = ({ prevStep, nextStep, step, setFormData }) => {
@@ -61,6 +61,7 @@ const TempI9Form = ({ prevStep, nextStep, step, setFormData }) => {
 
   // Form submission handler
   const onSubmit = (data) => {
+    console.log("form", data);
     const formData = {
       // 🟢 Common fields
       lastName: data.lastName,
@@ -72,23 +73,40 @@ const TempI9Form = ({ prevStep, nextStep, step, setFormData }) => {
       ssn: data.ssn,
       email: data.employeeEmail,
       phone: data.employeePhone,
-      signature: data.employeeSignature?.[0] || undefined,
+      employeeSignature7: data.employeeSignature?.[0] || undefined,
       signatureDate: data.signDate,
 
       // 🟡 Citizenship status
       status: data.citizenship,
 
       // 🟣 Conditional fields based on citizenship type
-      ...(data.citizenship === I9Status.Permanent && {
-        uscisNumber: data.uscisNumber,
-      }),
+      // ...(data.citizenship === I9Status.Permanent && {
+      //   uscisNumber: data.uscisNumber,
+      // }),
 
-      ...(data.citizenship === I9Status.NonCitizen_Other && {
-        uscisNumber: data.otherUscis,
-        admissionNumber: data.i94Number,
-        foreignPassportNumber: data.passportNumber,
-      }),
+      // ...(data.citizenship === I9Status.NonCitizen_Other && {
+      //   uscisNumber: data.otherUscis,
+      //   admissionNumber: data.i94Number,
+      //   foreignPassportNumber: data.passportNumber,
+      // }),
     };
+
+    // 🟣 Conditionally add extra fields
+    if (
+      data.citizenship === "Lawful Permanent Resident" ||
+      data.citizenship === I9Status.Permanent
+    ) {
+      formData.uscisNumber = data.uscisNumber;
+    }
+
+    if (
+      data.citizenship === "Other Noncitizen" ||
+      data.citizenship === I9Status.NonCitizen_Other
+    ) {
+      formData.uscisNumber = data.otherUscis;
+      formData.admissionNumber = data.i94Number;
+      formData.foreignPassportNumber = data.passportNumber;
+    }
     setFormData((prev) => ({
       ...prev,
       i9Form: formData,

@@ -32,7 +32,7 @@ const CertificationText = ({ prevStep, nextStep, step, setFormData }) => {
         ...prev,
         applicationCarification: {
           check: allData.applicationCarification.check,
-          employeeSignature4: allData.employeeSignature?.[0] || null,
+          employeeSignature3: allData.employeeSignature?.[0] || null,
         },
       }));
 

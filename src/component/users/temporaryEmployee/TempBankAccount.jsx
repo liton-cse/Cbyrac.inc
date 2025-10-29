@@ -28,7 +28,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
     savingsAccount: null,
   }); // Store checking and savings data
 
-  const totalSteps = 12;
+  const totalSteps = 13;
 
   const {
     register,
@@ -40,6 +40,8 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
     reset,
   } = useForm({
     defaultValues: {
+      name: "",
+      ssn: "",
       documents: null,
       employeeSignature: null,
       bankName: "",
@@ -131,6 +133,11 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
       if (selectedAccount === "checking") {
         updatedAccountData = {
           ...accountData,
+          name: allData.name,
+          ssn: allData.ssn,
+          accountFile: allData.documents[0], // FileList
+          employeeSignature6: allData.employeeSignature[0], // FileList
+          signatureDate: allData.signDate,
           checkingAccount: {
             accountType: "Checking",
             bankName: allData.bankName,
@@ -139,9 +146,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
             depositPercentage: allData.depositPercentage,
             transitNo: allData.transitNo,
             accountNo: allData.accountNo,
-            documents: allData.documents[0], // FileList
-            employeeSignature6: allData.employeeSignature[0], // FileList
-            signDate: allData.signDate,
           },
         };
       } else {
@@ -153,13 +157,11 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
             transitNo: allData.savingsTransitNo,
             accountNo: allData.savingsAccountNo,
             depositPercentage:
-              accountData.checking?.depositType === "full"
+              accountData.checkingAccount?.depositType === "full"
                 ? 0
-                : accountData.checking?.depositType === "partial"
-                ? 100 - Number(accountData.checking.depositPercentage)
+                : accountData.checkingAccount?.depositType === "partial"
+                ? 100 - Number(accountData.checkingAccount.depositPercentage)
                 : "",
-            employeeSignature7: allData.employeeSignature[0],
-            signatureDate: allData.signDate,
           },
         };
       }
@@ -168,22 +170,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
 
       // Log the updated account data to console
       console.log("Collected Account Data:", updatedAccountData);
-
-      // Reset form for the next account type
-      reset({
-        documents: null,
-        employeeSignature: null,
-        bankName: "",
-        state: "",
-        depositType: "",
-        depositPercentage: "",
-        transitNo: "",
-        accountNo: "",
-        secondBankName: "",
-        savingsTransitNo: "",
-        savingsAccountNo: "",
-        signDate: "",
-      });
       setFiles([]);
       setSignaturePreview(null);
       setDepositType("");
@@ -194,8 +180,12 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
         setSelectedAccount("savings");
       } else if (selectedAccount === "savings") {
         // If both checking and savings data are collected, proceed to next step
-        if (updatedAccountData.checking) {
-          setFormData(updatedAccountData); // Pass combined data to parent
+        if (updatedAccountData.checkingAccount) {
+          console.log("Account Data", accountData);
+          setFormData((prev) => ({
+            ...prev,
+            bankForm: updatedAccountData,
+          })); // Pass combined data to parent
           nextStep();
         } else {
           setSelectedAccount("checking"); // Go back to checking if not filled
@@ -299,6 +289,46 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
                   <div>
                     <label className="text-white mb-1 block">
+                      Name <span className="text-red-500">*</span>
+                    </label>
+                    <div className={inputWrapperClass}>
+                      <input
+                        type="text"
+                        placeholder="Enter Name"
+                        {...register("name", {
+                          required: "name is required",
+                        })}
+                        className={inputClass}
+                      />
+                    </div>
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.name.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-white mb-1 block">
+                      ssn<span className="text-red-500">*</span>
+                    </label>
+                    <div className={inputWrapperClass}>
+                      <input
+                        type="number"
+                        placeholder="XXX-XX---"
+                        {...register("ssn", {
+                          required: "SSN code is required",
+                        })}
+                        className={inputClass}
+                      />
+                    </div>
+                    {errors.ssn && (
+                      <p className="text-red-500 text-sm mt-1">
+                        {errors.ssn.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-white mb-1 block">
                       Bank Name <span className="text-red-500">*</span>
                     </label>
                     <div className={inputWrapperClass}>
@@ -393,7 +423,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                         </select>
                       ) : (
                         <input
-                          type="text"
+                          type="number"
                           placeholder="Select deposit type first"
                           readOnly
                           className={`${inputClass} cursor-not-allowed`}
@@ -415,7 +445,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     </label>
                     <div className={inputWrapperClass}>
                       <input
-                        type="text"
+                        type="number"
                         placeholder="Enter Transit/ABA No"
                         {...register("transitNo", {
                           required: "Transit/ABA No is required",
@@ -436,7 +466,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     </label>
                     <div className={inputWrapperClass}>
                       <input
-                        type="text"
+                        type="number"
                         placeholder="Enter Account No"
                         {...register("accountNo", {
                           required: "Account No is required",
@@ -586,11 +616,14 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                       <input
                         type="number"
                         value={
-                          accountData.checking?.depositType === "full"
+                          accountData.checkingAccount?.depositType === "full"
                             ? 0
-                            : accountData.checking?.depositType === "partial"
+                            : accountData.checkingAccount?.depositType ===
+                              "partial"
                             ? 100 -
-                              Number(accountData.checking?.depositPercentage)
+                              Number(
+                                accountData.checkingAccount?.depositPercentage
+                              )
                             : ""
                         }
                         readOnly
@@ -607,7 +640,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     </label>
                     <div className={inputWrapperClass}>
                       <input
-                        type="text"
+                        type="number"
                         placeholder="Enter Transit/ABA No"
                         {...register("savingsTransitNo", {
                           required: "Transit/ABA No is required",
@@ -628,7 +661,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                     </label>
                     <div className={inputWrapperClass}>
                       <input
-                        type="text"
+                        type="number"
                         placeholder="Enter Account No"
                         {...register("savingsAccountNo", {
                           required: "Account No is required",

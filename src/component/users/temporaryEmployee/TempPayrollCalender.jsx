@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { getPayrollCalender } from "../../../redux/employeeApi/temporaryApi";
 
-const PayrollCalender = () => {
+const TempPayrollCalender = () => {
   const [loadingType, setLoadingType] = useState(null);
   const [payrollData, setPayrollData] = useState(null);
   const [fileUrl, setFileUrl] = useState("");
@@ -152,4 +152,4 @@ const PayrollCalender = () => {
   );
 };
 
-export default PayrollCalender;
+export default TempPayrollCalender;

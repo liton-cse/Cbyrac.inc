@@ -1,9 +1,23 @@
 import { Button } from "antd";
-import { Download, Loader2, Printer, Upload, X, FileText } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  Printer,
+  Upload,
+  X,
+  FileText,
+  File,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { Document, Page, pdfjs } from "react-pdf";
+import { internTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";
 
-const Timesheet = () => {
+// Set PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+const TimeSheet = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState("");
@@ -11,8 +25,21 @@ const Timesheet = () => {
   const [loadingType, setLoadingType] = useState(null);
 
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
+  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
+
+  const {
+    register,
+    reset,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm();
+
+  /* --------------------------------------------------------------- */
+  /*                     FILE VALIDATION & PREVIEW                  */
+  /* --------------------------------------------------------------- */
   const getFileType = (file) => {
     if (file.type.startsWith("image/")) return "image";
     if (file.type === "application/pdf") return "pdf";
@@ -24,76 +51,63 @@ const Timesheet = () => {
       setError("Invalid file type. Allowed: JPG, PNG, PDF");
       return false;
     }
-
     if (file.size > MAX_FILE_SIZE) {
-      setError("File size exceeds 10MB limit");
+      setError("File size exceeds 10 MB limit");
       return false;
     }
-
     setError("");
     return true;
   };
 
-  const handleFiles = (files) => {
+  const createPreview = (file, type) => {
+    return new Promise((resolve) => {
+      if (type === "image") {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        resolve("");
+      }
+    });
+  };
+
+  const handleFiles = async (files) => {
     if (!files) return;
 
     const newFiles = [];
 
-    Array.from(files).forEach((file) => {
+    for (const file of Array.from(files)) {
       if (validateFile(file)) {
-        const fileType = getFileType(file);
-        const preview = "";
+        const type = getFileType(file);
+        const preview = type === "image" ? await createPreview(file, type) : "";
 
-        const uploadedFile = {
-          file,
-          preview,
-          type: fileType,
-        };
-
-        newFiles.push(uploadedFile);
-
-        if (fileType === "image") {
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            setUploadedFiles((prev) =>
-              prev.map((f) =>
-                f.file === file ? { ...f, preview: e.target.result } : f
-              )
-            );
-          };
-          reader.readAsDataURL(file);
-        }
+        newFiles.push({ file, preview, type });
       }
-    });
+    }
 
     setUploadedFiles((prev) => [...prev, ...newFiles]);
   };
 
+  /* --------------------------------------------------------------- */
+  /*                     DRAG & DROP HANDLERS                        */
+  /* --------------------------------------------------------------- */
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
+  const handleDragLeave = () => setIsDragging(false);
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     handleFiles(e.dataTransfer.files);
   };
+  const handleFileSelect = (e) => handleFiles(e.target.files);
 
-  const handleFileSelect = (e) => {
-    handleFiles(e.target.files);
-  };
-
-  const removeFile = (index) => {
+  const removeFile = (index) =>
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  const getFileIcon = (fileType) => {
-    switch (fileType) {
+  const getFileIcon = (type) => {
+    switch (type) {
       case "image":
         return <ImageIcon className="w-6 h-6" />;
       case "pdf":
@@ -102,70 +116,90 @@ const Timesheet = () => {
         return <File className="w-6 h-6" />;
     }
   };
-  // pdf url
-  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      citizenship: [],
-    },
-  });
 
-  const onSubmit = (data) => {
-    console.log("I-9 Form Data Submitted:", data);
-    alert("Form submitted successfully! Check console.");
-  };
-
-  const inputWrapperClass =
-    "rounded-md bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] mt-1 p-[1px]";
-  const inputClass =
-    "w-full bg-slate-900 text-white rounded-md py-2 px-3 focus:outline-none focus:ring-0";
-
-  // Download handler for pdf
+  /* --------------------------------------------------------------- */
+  /*                     DOWNLOAD & PRINT HANDLERS                    */
+  /* --------------------------------------------------------------- */
   const handleDownload = async () => {
     setLoadingType("download");
-
     try {
-      const response = await fetch(pdfUrl);
-      if (!response.ok) throw new Error("Failed to fetch PDF");
-
-      // convert file to blob
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-
-      // create a link element and trigger download
       const a = document.createElement("a");
-      a.href = url;
+      a.href = pdfUrl;
       a.download = "Timesheet.pdf";
       document.body.appendChild(a);
       a.click();
       a.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download error:", error);
+    } catch (err) {
+      console.error("Download error:", err);
       alert("Failed to download the PDF file!");
     } finally {
       setLoadingType(null);
     }
   };
-  // Print handler for pdf
+
   const handlePrint = async () => {
     setLoadingType("print");
-    // simulate delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const win = window.open(pdfUrl, "_blank");
+    if (win) {
+      win.onload = () => win.print();
+    } else {
+      alert("Please allow pop-ups to print the timesheet.");
+    }
+    await new Promise((r) => setTimeout(r, 800));
     setLoadingType(null);
-    alert("Timesheet printed!");
   };
 
+  /* --------------------------------------------------------------- */
+  /*                     FORM SUBMIT                                 */
+  /* --------------------------------------------------------------- */
+  const onSubmit = async (data) => {
+    const formData = new FormData();
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (
+        value &&
+        typeof value === "object" &&
+        value.name &&
+        value.size !== undefined
+      ) {
+        formData.append(key, value);
+      } else {
+        formData.append(key, value);
+      }
+    });
+
+    uploadedFiles.forEach((item, idx) => {
+      formData.append(`timeSheetPdfOrImage`, item.file);
+    });
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof Blob) {
+        console.log(
+          key,
+          `(File: ${value.name}, ${(value.size / 1024).toFixed(1)} KB)`
+        );
+      } else {
+        console.log(key, value);
+      }
+    }
+
+    const response = await internTimeSheetApi(formData);
+    console.log("Data post successfully", response);
+    reset();
+    setUploadedFiles([]);
+  };
+  /* --------------------------------------------------------------- */
+  /*                     UI STYLES                                   */
+  /* --------------------------------------------------------------- */
+  const inputWrapperClass =
+    "rounded-md bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] mt-1 p-[1px]";
+  const inputClass =
+    "w-full bg-slate-900 text-white rounded-md py-2 px-3 focus:outline-none focus:ring-0";
+
   return (
-    <div className="text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="text-white min-h-screen bg-slate-950">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="flex space-x-96 mb-4">
+        <div className="flex justify-between items-start mb-6">
           <div className="text-sm">
             <div className="font-bold text-lg mb-2">CBYRAC, INC</div>
             <div>123 MAIN STREET SUITE 100</div>
@@ -173,8 +207,8 @@ const Timesheet = () => {
             <div>PHONE: 555-555-5555</div>
             <div>EMAIL: info@cbyrac.com</div>
           </div>
-          <div className="w-24 h-24 bg-white rounded flex items-center justify-center">
-            <img src="/cbyrac-logo.png" alt="Company Logo" />
+          <div className="w-24 h-24 bg-white rounded flex items-center justify-center overflow-hidden">
+            <img src="/cbyrac-logo.png" alt="Logo" className="object-contain" />
           </div>
         </div>
 
@@ -183,19 +217,15 @@ const Timesheet = () => {
           <h1 className="text-2xl font-bold mb-2">
             Employee Weekly Time Sheet (For Intern Employee)
           </h1>
-          <p className="text-lg text-gray-200 mb-7">
+          <p className="text-lg text-gray-200">
             Submit Timesheet to Payroll@Cbyracinc.com
           </p>
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="rounded-2xl max-w-7xl mx-auto"
-        >
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* General Information */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-            {/* First Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block">
                 Employee First Name <span className="text-red-500">*</span>
@@ -217,7 +247,6 @@ const Timesheet = () => {
               )}
             </div>
 
-            {/* Last Name */}
             <div>
               <label className="mb-1 block">
                 Employee Last Name <span className="text-red-500">*</span>
@@ -240,8 +269,8 @@ const Timesheet = () => {
             </div>
           </div>
 
-          {/* Department Name & Job Title */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
+          {/* Department & Job Title */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block">
                 Department Name <span className="text-red-500">*</span>
@@ -249,8 +278,8 @@ const Timesheet = () => {
               <div className={inputWrapperClass}>
                 <input
                   type="text"
-                  placeholder="Enter Department Name"
-                  {...register("department", {
+                  placeholder="Enter Department"
+                  {...register("departmentName", {
                     required: "Department is required",
                   })}
                   className={inputClass}
@@ -286,7 +315,7 @@ const Timesheet = () => {
           </div>
 
           {/* Address & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block">
                 Address <span className="text-red-500">*</span>
@@ -295,9 +324,7 @@ const Timesheet = () => {
                 <input
                   type="text"
                   placeholder="Enter Address"
-                  {...register("address", {
-                    required: "Address is required",
-                  })}
+                  {...register("address", { required: "Address is required" })}
                   className={inputClass}
                 />
               </div>
@@ -313,8 +340,8 @@ const Timesheet = () => {
               <div className={inputWrapperClass}>
                 <input
                   type="tel"
-                  placeholder="Enter Phone Number"
-                  {...register("phone", {
+                  placeholder="Enter Phone"
+                  {...register("phoneNumber", {
                     required: "Phone number is required",
                   })}
                   className={inputClass}
@@ -326,8 +353,8 @@ const Timesheet = () => {
             </div>
           </div>
 
-          {/* Supervisor Email & Phone */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          {/* Supervisor Info */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block">
                 Supervisor’s Email <span className="text-red-500">*</span>
@@ -335,7 +362,7 @@ const Timesheet = () => {
               <div className={inputWrapperClass}>
                 <input
                   type="email"
-                  placeholder="Enter Supervisor Email"
+                  placeholder="Enter Email"
                   {...register("supervisorEmail", {
                     required: "Email is required",
                   })}
@@ -356,9 +383,9 @@ const Timesheet = () => {
               <div className={inputWrapperClass}>
                 <input
                   type="tel"
-                  placeholder="Enter Supervisor Phone"
+                  placeholder="Enter Phone"
                   {...register("supervisorPhone", {
-                    required: "Phone number is required",
+                    required: "Phone is required",
                   })}
                   className={inputClass}
                 />
@@ -370,13 +397,14 @@ const Timesheet = () => {
               )}
             </div>
           </div>
-          <div className="flex justify-center space-x-5 mt-14">
-            {/* Download Button */}
+
+          {/* Download / Print Buttons */}
+          <div className="flex justify-center gap-6 my-10">
             <button
               type="button"
               onClick={handleDownload}
-              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70"
               disabled={loadingType === "download"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
             >
               {loadingType === "download" ? (
                 <Loader2 className="animate-spin w-5 h-5" />
@@ -384,29 +412,27 @@ const Timesheet = () => {
                 <Download className="w-5 h-5" />
               )}
               {loadingType === "download"
-                ? "Downloading..."
+                ? "Downloading…"
                 : "Download Timesheet"}
             </button>
 
-            {/* Print Button */}
             <button
               type="button"
               onClick={handlePrint}
-              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70"
               disabled={loadingType === "print"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
             >
               {loadingType === "print" ? (
                 <Loader2 className="animate-spin w-5 h-5" />
               ) : (
                 <Printer className="w-5 h-5" />
               )}
-              {loadingType === "print" ? "Printing..." : "Print Timesheet"}
+              {loadingType === "print" ? "Printing…" : "Print Timesheet"}
             </button>
           </div>
 
-          {/* // Upload field */}
-          <div className="w-full max-w-7xl mx-auto mt-12 mb-12">
-            {/* Upload Area */}
+          {/* ------------------- FILE UPLOAD AREA ------------------- */}
+          <div className="mt-12">
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
@@ -418,22 +444,19 @@ const Timesheet = () => {
               }`}
             >
               <div className="flex flex-col items-center gap-4">
-                {/* Upload Icon */}
                 <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center">
                   <Upload className="w-10 h-10 text-amber-600" />
                 </div>
 
-                {/* Text Content */}
                 <div>
                   <h2 className="text-2xl font-semibold text-white mb-2">
                     Upload Documents
                   </h2>
                   <p className="text-gray-400 mb-6">
-                    Drag and drop files here, or browse
+                    Drag & drop files here, or click to browse
                   </p>
                 </div>
 
-                {/* Choose File Button */}
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   className="!bg-[#946344] hover:bg-amber-700 !text-white !px-9 !py-5 rounded-lg font-semibold"
@@ -441,83 +464,88 @@ const Timesheet = () => {
                   Choose File
                 </Button>
 
-                {/* File Info */}
                 <p className="text-sm text-gray-400">
-                  Supports JPG, PNG, PDF up to 10MB
+                  Supports JPG, PNG, PDF – max 10 MB
                 </p>
               </div>
 
-              {/* Hidden File Input */}
               <input
                 ref={fileInputRef}
                 type="file"
-                multiple
                 accept=".jpg,.jpeg,.png,.pdf"
+                multiple
                 onChange={handleFileSelect}
                 className="hidden"
               />
             </div>
 
-            {/* Error Message */}
+            {/* Global upload error */}
             {error && (
               <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
                 {error}
               </div>
             )}
 
-            {/* Uploaded Files Preview */}
+            {/* Uploaded files preview */}
             {uploadedFiles.length > 0 && (
               <div className="mt-8">
-                <h3 className="text-lg font-semibold text-foreground mb-4">
+                <h3 className="text-lg font-semibold mb-4">
                   Uploaded Files ({uploadedFiles.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {uploadedFiles.map((uploadedFile, index) => (
+                  {uploadedFiles.map((item, idx) => (
                     <div
-                      key={index}
-                      className="relative border border-border rounded-lg overflow-hidden bg-card hover:shadow-lg transition-shadow"
+                      key={idx}
+                      className="relative border border-gray-700 rounded-lg overflow-hidden bg-slate-800 hover:shadow-lg transition-shadow"
                     >
-                      {/* Image Preview */}
-                      {uploadedFile.type === "image" &&
-                        uploadedFile.preview && (
-                          <div className="relative w-full h-48 bg-muted">
-                            <img
-                              src={uploadedFile.preview || "/placeholder.svg"}
-                              alt={uploadedFile.file.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-
-                      {/* PDF/Other File Preview */}
-                      {uploadedFile.type !== "image" && (
-                        <div className="w-full h-48 bg-muted flex items-center justify-center">
-                          <div className="text-center">
-                            {getFileIcon(uploadedFile.type)}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {uploadedFile.type === "pdf"
-                                ? "PDF Document"
-                                : "File"}
-                            </p>
-                          </div>
+                      {/* Image preview */}
+                      {item.type === "image" && item.preview && (
+                        <div className="h-48 bg-gray-900">
+                          <img
+                            src={item.preview}
+                            alt={item.file.name}
+                            className="w-full h-full object-contain"
+                          />
                         </div>
                       )}
 
-                      {/* File Info */}
-                      <div className="p-3 border-t border-border">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {uploadedFile.file.name}
+                      {/* PDF preview (react-pdf) */}
+                      {item.type === "pdf" && (
+                        <div className="h-48 bg-gray-900 flex items-center justify-center p-2">
+                          <Document
+                            file={item.file}
+                            onLoadError={console.error}
+                            loading={
+                              <FileText className="w-12 h-12 text-gray-500" />
+                            }
+                          >
+                            <Page pageNumber={1} width={180} />
+                          </Document>
+                        </div>
+                      )}
+
+                      {/* Fallback for other types */}
+                      {item.type === "other" && (
+                        <div className="h-48 bg-gray-900 flex items-center justify-center">
+                          {getFileIcon(item.type)}
+                        </div>
+                      )}
+
+                      {/* File info */}
+                      <div className="p-3 border-t border-gray-700">
+                        <p className="text-sm font-medium truncate">
+                          {item.file.name}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(uploadedFile.file.size / 1024).toFixed(2)} KB
+                        <p className="text-xs text-gray-400">
+                          {(item.file.size / 1024).toFixed(1)} KB
                         </p>
                       </div>
 
-                      {/* Remove Button */}
+                      {/* Remove button */}
                       <button
-                        onClick={() => removeFile(index)}
-                        className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 rounded-full text-white transition-colors"
-                        aria-label="Remove file"
+                        onClick={() => removeFile(idx)}
+                        className="absolute top-2 right-2 p-1 bg-red-600 hover:bg-red-700 rounded-full text-white transition"
+                        aria-label="Remove"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -527,77 +555,53 @@ const Timesheet = () => {
               </div>
             )}
           </div>
-          {/* Signature & Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 mb-4">
-            <div>
-              <label className="block mb-2">
-                Employee Signature <span className="text-red-500">*</span>
-              </label>
-              <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                  <span className="text-center">Upload Signature</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    {...register("employeeSignature", {
-                      required: "Signature is required",
-                    })}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-              {errors.employeeSignature && (
-                <p className="text-red-500 text-sm">
-                  {errors.employeeSignature.message}
-                </p>
+
+          {/* ------------------- SIGNATURE ------------------- */}
+          <div className="mt-8">
+            <label className="block mb-2">
+              Employee Signature <span className="text-red-500">*</span>
+            </label>
+            <Controller
+              control={control}
+              name="employeeSignature1"
+              rules={{ required: "Signature is required" }}
+              render={({ field }) => (
+                <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md flex items-center justify-center cursor-pointer overflow-hidden">
+                  <label className="w-full h-full flex items-center justify-center text-white">
+                    {field.value ? (
+                      <img
+                        src={URL.createObjectURL(field.value)}
+                        alt="Signature"
+                        className="max-h-full"
+                      />
+                    ) : (
+                      "Upload Signature"
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) field.onChange(file);
+                      }}
+                    />
+                  </label>
+                </div>
               )}
-            </div>
+            />
+            {errors.employeeSignature && (
+              <p className="text-red-500 text-sm">
+                {errors.employeeSignature.message}
+              </p>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 mb-4">
-            <div>
-              <label className="block mb-2">
-                Supervisor’s Signature <span className="text-red-500">*</span>
-              </label>
-              <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                  <span className="text-center">Upload Signature</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    {...register("supervisorSignature", {
-                      required: "Signature is required",
-                    })}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-              {errors.supervisorSignature && (
-                <p className="text-red-500 text-sm">
-                  {errors.supervisorSignature.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1 block">Title</label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  {...register("title", { required: "Title is required" })}
-                  className={`py-3.5 ${inputClass}`}
-                />
-              </div>
-              {errors.title && (
-                <p className="text-red-500 text-sm">{errors.title.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Submit */}
-          <div className="max-w-6xl mx-auto flex justify-center mt-10">
+          {/* ------------------- SUBMIT ------------------- */}
+          <div className="flex justify-center mt-12">
             <button
               type="submit"
-              className="px-20 py-4 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90"
+              className="px-20 py-4 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 transition"
             >
               Submit
             </button>
@@ -608,4 +612,4 @@ const Timesheet = () => {
   );
 };
 
-export default Timesheet;
+export default TimeSheet;

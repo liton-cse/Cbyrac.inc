@@ -4,6 +4,7 @@ import { FileText, ImageIcon, Upload, X, Loader2 } from "lucide-react";
 import { Button } from "antd";
 import { useDispatch } from "react-redux";
 import { uploadCalendarEntry } from "../../../../redux/feature/calendar/calendarSlice";
+import toast from "react-hot-toast";
 
 const AdminCalender = () => {
   // upload file states
@@ -118,6 +119,8 @@ const AdminCalender = () => {
     if (uploadCalendarEntry.fulfilled.match(result)) {
       setLoading(false);
     }
+    toast.success("calender submitted successfully 🍾");
+    setUploadedFiles("");
   };
 
   return (
