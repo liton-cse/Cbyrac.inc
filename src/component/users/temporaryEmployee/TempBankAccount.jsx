@@ -15,7 +15,13 @@ const Button = ({ type = "button", className, onClick, children }) => (
   </button>
 );
 
-const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
+const TempBankAccount = ({
+  prevStep,
+  step,
+  nextStep,
+  setFormData,
+  preview,
+}) => {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [depositType, setDepositType] = useState("");
   const [selectedPercentage, setSelectedPercentage] = useState(0);
@@ -53,7 +59,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
       secondBankName: "",
       savingsTransitNo: "",
       savingsAccountNo: "",
-      signDate: "",
+      signDate: new Date().toISOString().split("T")[0],
     },
   });
 
@@ -106,23 +112,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
     setValue("documents", null, { shouldValidate: true });
   };
 
-  const handleSignatureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      setSignaturePreview(URL.createObjectURL(file));
-      setValue("employeeSignature", dataTransfer.files, {
-        shouldValidate: true,
-      });
-    }
-  };
-
-  const handleRemoveSignature = () => {
-    setSignaturePreview(null);
-    setValue("employeeSignature", null, { shouldValidate: true });
-  };
-
   // Handle form submission
   const handleNext = async () => {
     const result = await trigger();
@@ -135,8 +124,6 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
           ...accountData,
           name: allData.name,
           ssn: allData.ssn,
-          accountFile: allData.documents[0], // FileList
-          employeeSignature6: allData.employeeSignature[0], // FileList
           signatureDate: allData.signDate,
           checkingAccount: {
             accountType: "Checking",
@@ -185,6 +172,7 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
           setFormData((prev) => ({
             ...prev,
             bankForm: updatedAccountData,
+            accountFile: allData.documents[0],
           })); // Pass combined data to parent
           nextStep();
         } else {
@@ -687,34 +675,13 @@ const TempBankAccount = ({ prevStep, step, nextStep, setFormData }) => {
                   <span className="text-red-500">*</span>
                 </label>
 
-                {!signaturePreview && (
-                  <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                    <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                      <span className="text-center">Upload Signature</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleSignatureUpload}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                )}
-
-                {signaturePreview && (
+                {preview && (
                   <div className="mt-3 relative inline-block">
                     <img
-                      src={signaturePreview}
+                      src={preview}
                       alt="Signature Preview"
                       className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
-                    <button
-                      type="button"
-                      onClick={handleRemoveSignature}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
-                    >
-                      <X size={14} />
-                    </button>
                   </div>
                 )}
 

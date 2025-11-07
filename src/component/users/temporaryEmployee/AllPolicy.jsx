@@ -2,7 +2,7 @@ import React from "react";
 import ProgressBar from "../../progressBar/ProgressBar";
 import { useForm } from "react-hook-form";
 
-const AllPolicy = ({ prevStep, nextStep, step, setFormData }) => {
+const AllPolicy = ({ prevStep, nextStep, step, setFormData, preview }) => {
   const {
     register,
     handleSubmit,
@@ -36,7 +36,6 @@ const AllPolicy = ({ prevStep, nextStep, step, setFormData }) => {
             name: allData.explainName,
           },
           check: allData.finalCheck,
-          employeeSignature5: allData.employeeSignature?.[0] || null,
         },
       }));
 
@@ -181,26 +180,26 @@ const AllPolicy = ({ prevStep, nextStep, step, setFormData }) => {
           </div>
           <form className="rounded-2xl  max-w-7xl mx-auto">
             {/* Employee Signature and date */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 mt-6">
-              <div>
-                <label className="block mb-2">
-                  Employee Signature <span className="text-red-500">*</span>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 mb-4">
+              <div className="mb-6">
+                <label className="text-white block mb-3">
+                  Upload Employee Signature{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                  <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                    <span className="text-center">Upload Signature</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      {...register("employeeSignature", {
-                        required: "Signature is required",
-                      })}
-                      className="hidden"
+
+                {preview && (
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={preview}
+                      alt="Signature Preview"
+                      className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
-                  </label>
-                </div>
+                  </div>
+                )}
+
                 {errors.employeeSignature && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-2">
                     {errors.employeeSignature.message}
                   </p>
                 )}

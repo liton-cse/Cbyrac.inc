@@ -20,7 +20,7 @@ const SignIn = () => {
       navigate("/");
     } else if (userInfo?.token && userInfo?.role === "Temporary Employee") {
       navigate("/temporary-employee");
-      // navigate("/temporary-employee/view-pdf");
+      // navigate("/view-pdf");
     } else if (userInfo?.token && userInfo?.role === "Administrator") {
       navigate("/admin");
     }

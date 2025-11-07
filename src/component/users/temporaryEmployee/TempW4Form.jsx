@@ -3,7 +3,7 @@ import ProgressBar from "../../progressBar/ProgressBar";
 import { useState } from "react";
 import { X } from "lucide-react";
 
-const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
+const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
   const totalSteps = 12;
 
   const {
@@ -14,9 +14,12 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
     setValue,
     // watch,
     formState: { errors },
-  } = useForm({});
+  } = useForm({
+    defaultValues: {
+      signDate: new Date().toISOString().split("T")[0],
+    },
+  });
 
-  const [preview, setPreview] = useState(null);
   // Handle Next button
   const handleNext = async () => {
     const result = await trigger();
@@ -29,7 +32,6 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
         address: data.address,
         ssn: data.ssn,
         maritalStatus: data.maritalStatus,
-        employeeSignature8: data.employeeSignature?.[0], // optional File
         signatureDate: data.signDate,
         qualifyingChildren: data.qualifyingChildren,
         amount: data.otherIncome,
@@ -45,24 +47,12 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
         ...prev,
         w4Form: formData,
       }));
-      setPreview(null); // clear signature preview
       nextStep();
     } else {
     }
   };
 
   // Signature handlers
-  const handleSignatureUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(file);
-      setPreview(URL.createObjectURL(file));
-      setValue("employeeSignature", dataTransfer.files, {
-        shouldValidate: true,
-      });
-    }
-  };
 
   const handleRemoveSignature = () => {
     setPreview(null);
@@ -417,22 +407,7 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData }) => {
                   Employee Signature <span className="text-red-500">*</span>
                 </label>
 
-                {!preview ? (
-                  <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                    <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                      <span className="text-center">Upload Signature</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        {...register("employeeSignature", {
-                          required: "Signature is required",
-                          onChange: handleSignatureUpload,
-                        })}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                ) : (
+                {preview && (
                   <div className="mt-3 relative inline-block">
                     <img
                       src={preview}

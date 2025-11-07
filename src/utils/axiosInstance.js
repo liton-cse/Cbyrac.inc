@@ -1,8 +1,9 @@
 // axiosInstance.js
 import axios from "axios";
-
+import { VITE_BASE_API } from "../config";
+console.log(VITE_BASE_API);
 const axiosInstance = axios.create({
-  baseURL: `${import.meta.env.VITE_BASE_API}`,
+  baseURL: VITE_BASE_API,
 });
 
 axiosInstance.interceptors.request.use(

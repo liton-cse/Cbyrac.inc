@@ -2,7 +2,13 @@ import React from "react";
 import ProgressBar from "../../progressBar/ProgressBar";
 import { useForm } from "react-hook-form";
 
-const InjuriesProcedures = ({ prevStep, nextStep, step, setFormData }) => {
+const InjuriesProcedures = ({
+  prevStep,
+  nextStep,
+  step,
+  setFormData,
+  preview,
+}) => {
   const {
     register,
     handleSubmit,
@@ -10,8 +16,12 @@ const InjuriesProcedures = ({ prevStep, nextStep, step, setFormData }) => {
     onSubmit,
     getValues,
     trigger,
-  } = useForm();
-  const totalSteps = 11;
+  } = useForm({
+    defaultValues: {
+      signDate: new Date().toISOString().split("T")[0],
+    },
+  });
+  const totalSteps = 12;
   const handleNext = async () => {
     const result = await trigger();
     if (result) {
@@ -20,7 +30,6 @@ const InjuriesProcedures = ({ prevStep, nextStep, step, setFormData }) => {
       setFormData((prev) => ({
         ...prev,
         accidentProcedure: {
-          employeeSignature4: allData.employeeSignature?.[0],
           signatureDate: allData.signDate,
         },
       }));
@@ -129,45 +138,44 @@ const InjuriesProcedures = ({ prevStep, nextStep, step, setFormData }) => {
               release of this information as set forth in this authorization.
             </p>
           </div>
-          <form className="rounded-2xl  max-w-7xl mx-auto">
+          <form className="rounded-2xl  max-w-7xl mx-auto mb-4">
             {/* Employee Signature and date */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 mb-4 mt-8">
-              <div>
-                <label className="block mb-2">
-                  Employee Signature <span className="text-red-500">*</span>
+            <div className="grid grid-cols-1 sm:grid-cols-3">
+              <div className="mb-6">
+                <label className="text-white block mb-3">
+                  Upload Employee Signature{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                  <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                    <span className="text-center">Upload Signature</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      {...register("employeeSignature", {
-                        required: "Signature is required",
-                      })}
-                      className="hidden"
+
+                {preview && (
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={preview}
+                      alt="Signature Preview"
+                      className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
-                  </label>
-                </div>
+                  </div>
+                )}
+
                 {errors.employeeSignature && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-2">
                     {errors.employeeSignature.message}
                   </p>
                 )}
               </div>
-              <div>
-                <label className="mb-1 block">
+              <div className="mb-6">
+                <label className="mb-3 block">
                   Date <span className="text-red-500">*</span>
                 </label>
                 <div className={inputWrapperClass}>
                   <input
                     type="date"
                     {...register("signDate", { required: "Date is required" })}
-                    className={`py-3.5 date-input  ${inputClass}`}
+                    className={`${inputClass} py-3.5`}
                   />
                 </div>
                 {errors.signDate && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-1">
                     {errors.signDate.message}
                   </p>
                 )}

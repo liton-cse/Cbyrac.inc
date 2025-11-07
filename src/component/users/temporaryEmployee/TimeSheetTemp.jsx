@@ -9,7 +9,7 @@ import {
   File,
   Image as ImageIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Document, Page, pdfjs } from "react-pdf";
 import { tempTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";

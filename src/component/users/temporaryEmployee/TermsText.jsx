@@ -3,13 +3,17 @@ import ProgressBar from "../../progressBar/ProgressBar";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 
-const TermsText = ({ prevStep, nextStep, step, setFormData }) => {
+const TermsText = ({ prevStep, nextStep, step, setFormData, preview }) => {
   const {
     register,
     formState: { errors },
     getValues,
     trigger,
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      signDate: new Date().toISOString().split("T")[0],
+    },
+  });
   const totalSteps = 12;
 
   const [isChecked, setIsChecked] = useState(false); //state to track checkbox status
@@ -36,7 +40,6 @@ const TermsText = ({ prevStep, nextStep, step, setFormData }) => {
         ...prev,
         applicantCartification: {
           check: allData.applicantCarification.check,
-          employeeSignature2: allData.employeeSignature?.[0],
           signatureDate: allData.signDate,
         },
       }));
@@ -200,30 +203,28 @@ const TermsText = ({ prevStep, nextStep, step, setFormData }) => {
 
             {/* Employee Signature and date */}
             <div className="grid grid-cols-1 sm:grid-cols-3 mb-4">
-              <div>
-                <label className="block mb-2">
-                  Employee Signature <span className="text-red-500">*</span>
+              <div className="mb-6">
+                <label className="text-white block mb-3">
+                  Upload Employee Signature{" "}
+                  <span className="text-red-500">*</span>
                 </label>
-                <div className="w-[350px] h-[50px] bg-gradient-to-l from-[#D4BFB2] to-[#8D6851] rounded-md mt-1 flex items-center justify-center">
-                  <label className="w-full h-full flex items-center justify-center text-white cursor-pointer">
-                    <span className="text-center">Upload Signature</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      {...register("employeeSignature", {
-                        required: "Signature is required",
-                      })}
-                      className="hidden"
+
+                {preview && (
+                  <div className="mt-3 relative inline-block">
+                    <img
+                      src={preview}
+                      alt="Signature Preview"
+                      className="w-[200px] h-[80px] object-contain border rounded-md"
                     />
-                  </label>
-                </div>
+                  </div>
+                )}
+
                 {errors.employeeSignature && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-2">
                     {errors.employeeSignature.message}
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="mb-1 block">
                   Date <span className="text-red-500">*</span>
@@ -232,11 +233,11 @@ const TermsText = ({ prevStep, nextStep, step, setFormData }) => {
                   <input
                     type="date"
                     {...register("signDate", { required: "Date is required" })}
-                    className={`py-3.5 date-input  ${inputClass}`}
+                    className={`${inputClass} py-3.5`}
                   />
                 </div>
                 {errors.signDate && (
-                  <p className="text-red-500 text-sm">
+                  <p className="text-red-500 text-sm mt-1">
                     {errors.signDate.message}
                   </p>
                 )}

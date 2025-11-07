@@ -25,6 +25,7 @@ import Unauthorized from "../component/layouts/UnauthorizePage";
 import AdminCalender from "../component/users/admin/adminCalender/AdminCalender";
 import TempPayrollCalender from "../component/users/temporaryEmployee/TempPayrollCalender";
 import PdfViewer from "../component/users/temporaryEmployee/TemporaryPdf";
+import InternPdfViewer from "../component/users/internEmployee/InternPdf";
 
 const router = createBrowserRouter([
   // Public routes
@@ -90,11 +91,16 @@ const router = createBrowserRouter([
           { index: true, element: <TempApplyJob /> },
           { path: "time-sheet-temp", element: <TimeSheetTemp /> },
           { path: "payroll-calendar", element: <TempPayrollCalender /> },
-          { path: "view-pdf", element: <PdfViewer /> },
         ],
       },
     ],
   },
+
+  {
+    element: <ProtectedRoute allowedRoles={["Temporary Employee"]} />,
+    children: [{ path: "/view-pdf", element: <PdfViewer /> }],
+  },
+  { path: "/view-intern-pdf", element: <InternPdfViewer /> },
 
   //Protected Admin route,,,
   {

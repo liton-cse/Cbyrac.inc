@@ -8,7 +8,6 @@ import WorkExperienceForm from "./WorkExperienceForm";
 import References from "./References";
 import DrivingInfoForm from "./DrivingInfoForm";
 import TermsText from "./TermsText";
-import OnlyCbyracInc from "./OnlyCbyracInc";
 import CertificationText from "./CertificationText";
 import InjuriesProcedures from "./InjuriesProcedures";
 import AllPolicy from "./AllPolicy";
@@ -18,67 +17,10 @@ import TempW4Form from "./TempW4Form";
 import TempSelectCitizenShip from "./TempSelectCitizenShip";
 import { X, XIcon } from "lucide-react";
 import { useDispatch } from "react-redux";
-import {
-  addEmployee,
-  setEmployees,
-} from "../../../redux/feature/tempEmployee/tempEmployeeSlice";
 import axiosInstance from "../../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
-
-function appendToFormData(data, formData = new FormData(), prefix = "") {
-  for (const [key, value] of Object.entries(data)) {
-    const newPrefix = prefix ? `${prefix}.${key}` : key;
-
-    if (value instanceof File) {
-      let fieldName;
-      if (newPrefix === "citizenShipForm.photoID") {
-        fieldName =
-          value.type === "application/pdf" ? "photoIdPdf" : "photoIdImage";
-      } else if (newPrefix === "citizenShipForm.socialSecurityCard") {
-        fieldName =
-          value.type === "application/pdf"
-            ? "socialSecurityPdf"
-            : "socialSecurityImage";
-      } else if (newPrefix === "citizenShipForm.residentCard") {
-        fieldName =
-          value.type === "application/pdf"
-            ? "residentCardPdf"
-            : "residentCardImage";
-      } else if (newPrefix === "citizenShipForm.workAuthorizationDocument") {
-        fieldName =
-          value.type === "application/pdf"
-            ? "workAuthorizationPdf"
-            : "workAuthorizationImage";
-      } else if (newPrefix.includes("employeeSignature")) {
-        fieldName = key; // e.g., employeeSignature1, employeeSignature2
-      } else if (newPrefix === "bankForm.accountFile") {
-        fieldName =
-          value.type === "application/pdf"
-            ? "directDepositPdf"
-            : "directDepositImage";
-      } else {
-        fieldName = key; // Fallback to flat key
-      }
-      console.log(
-        `Appending file: ${fieldName} - ${value.name} (${value.type})`
-      ); // Debug
-      formData.append(fieldName, value);
-    } else if (Array.isArray(value)) {
-      value.forEach((item, index) => {
-        if (typeof item === "object" && item !== null) {
-          appendToFormData(item, formData, `${newPrefix}[${index}]`);
-        } else {
-          formData.append(`[${index}]`, item ?? "");
-        }
-      });
-    } else if (typeof value === "object" && value !== null) {
-      appendToFormData(value, formData, newPrefix);
-    } else {
-      formData.append(newPrefix, value ?? "");
-    }
-  }
-  return formData;
-}
+import { appendFormData } from "../../../utils/appendFormData";
+import { addEmployee } from "../../../redux/feature/tempEmployee/tempEmployeeSlice";
 
 const TempApplyJob = () => {
   const [step, setStep] = useState(1); // track current step
@@ -95,9 +37,14 @@ const TempApplyJob = () => {
     bankForm: {},
     i9Form: {},
     w4Form: {},
-    citizenShipForm: {},
+    citizenShipForm: "",
+    signature: null,
+    photoId: null,
+    accountFile: null,
+    residentCard: null,
+    socialSecurityCard: null,
+    workAuthorizationDocument: null,
   });
-  const [pdfData, setPdfData] = useState({});
   const navigate = useNavigate();
 
   //previous and next button logic
@@ -115,7 +62,7 @@ const TempApplyJob = () => {
   const onSubmit = (data) => {
     console.log("Form Data Submitted:", data);
   };
-
+  console.log("form Data", formData);
   // Step-wise Next button validation
   const nextStepHandler = async () => {
     // Trigger validation for all fields
@@ -199,15 +146,15 @@ const TempApplyJob = () => {
               },
             ].filter(
               (edu) =>
-                edu.schoolName ||
+                edu.name ||
                 edu.major ||
                 edu.graduationStatus ||
                 edu.yearsCompleted ||
                 edu.honorsReceived
             ),
             specialSkills: allData.skills,
-            employeeSignature1: allData.employeeSignature[0],
           },
+          signature: allData.employeeSignature[0],
         }));
       }
 
@@ -220,28 +167,20 @@ const TempApplyJob = () => {
 
   const handleFinalSubmit = async (updatedData) => {
     try {
-      console.log("I9FormData", updatedData.i9Form);
-      const formDataInstance = appendToFormData(updatedData);
-      // Log FormData contents for debugging
-      for (const [key, value] of formDataInstance.entries()) {
+      console.log("Form Data", updatedData);
+      const fd = new FormData();
+      appendFormData(fd, updatedData);
+      for (const [key, value] of fd.entries()) {
         console.log(`${key}:`, value instanceof File ? value.name : value);
       }
-
-      const response = await axiosInstance.post(
-        "temporaryForm/temporary",
-        formDataInstance
-      );
-      const result = response.data.data;
-      setPdfData(result);
-      navigate("view-pdf", { state: { result } });
-      // console.log(result);
-      // setStep(1);
+      dispatch(addEmployee(fd));
+      navigate("/view-pdf");
+      setStep(1);
     } catch (error) {
       console.error("❌ Error submitting form:", error);
       alert("Error submitting form. Please try again.");
     }
   };
-  console.log("Pdf Data", pdfData);
   // Signature preview handler
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -1050,21 +989,11 @@ const TempApplyJob = () => {
           nextStep={nextStep}
           setFormData={setFormData}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
       )}
-      {/* {step === 6 && (
-        <OnlyCbyracInc
-          register={register}
-          errors={errors}
-          prevStep={prevStep}
-          nextStep={nextStep}
-          step={step}
-          handleSubmit={handleSubmit}
-          onSubmit={onSubmit}
-        />
-      )}  */}
       {step === 6 && (
         <CertificationText
           register={register}
@@ -1073,6 +1002,7 @@ const TempApplyJob = () => {
           nextStep={nextStep}
           setFormData={setFormData}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
@@ -1084,6 +1014,7 @@ const TempApplyJob = () => {
           prevStep={prevStep}
           nextStep={nextStep}
           setFormData={setFormData}
+          preview={preview}
           step={step}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
@@ -1097,6 +1028,7 @@ const TempApplyJob = () => {
           nextStep={nextStep}
           setFormData={setFormData}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
@@ -1109,6 +1041,7 @@ const TempApplyJob = () => {
           nextStep={nextStep}
           setFormData={setFormData}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
@@ -1121,6 +1054,7 @@ const TempApplyJob = () => {
           setFormData={setFormData}
           nextStep={nextStep}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />
@@ -1133,6 +1067,7 @@ const TempApplyJob = () => {
           nextStep={nextStep}
           setFormData={setFormData}
           step={step}
+          preview={preview}
           handleSubmit={handleSubmit}
           onSubmit={onSubmit}
         />

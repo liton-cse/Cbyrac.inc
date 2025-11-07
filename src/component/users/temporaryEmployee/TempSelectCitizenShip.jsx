@@ -48,7 +48,6 @@ const UploadField = ({ label, name, setValue }) => {
         type: file.type,
       }));
       setPreviews(newPreviews);
-      console.log(`${name} new previews:`, newPreviews);
     } else {
       console.log(`${name}: No files selected`);
     }
@@ -146,7 +145,7 @@ const UploadField = ({ label, name, setValue }) => {
   );
 };
 
-const TempSelectCitizenShip = ({
+const SelectCitizenShip = ({
   prevStep,
   nextStep,
   step,
@@ -165,10 +164,6 @@ const TempSelectCitizenShip = ({
   } = useForm({
     defaultValues: {
       citizenship: "",
-      photoId: null,
-      ssn: null,
-      residentCard: null,
-      workAuth: null,
     },
   });
 
@@ -183,7 +178,6 @@ const TempSelectCitizenShip = ({
       setValue("ssn", null, { shouldValidate: true });
       setValue("residentCard", null, { shouldValidate: true });
       setValue("workAuth", null, { shouldValidate: true });
-      console.log("Form state after handleSelection:", getValues());
     },
     [setValue, getValues]
   );
@@ -191,60 +185,49 @@ const TempSelectCitizenShip = ({
   // Handle form submission
   const onSubmit = (data) => {
     let citizenshipData;
+    let updatedData;
 
     switch (data.citizenship) {
       case "Citizen":
-        citizenshipData = {
-          citizenshipStatus: "citizen",
-          photoID: data.photoId?.[0],
-          socialSecurityCard: data.ssn?.[0],
-        };
+        setFormData((prev) => {
+          updatedData = {
+            ...prev,
+            citizenShipForm: "citizen",
+            photoId: data.photoId?.[0],
+            socialSecurityCard: data.ssn?.[0],
+          };
+        });
         break;
 
       case "Resident":
-        citizenshipData = {
-          citizenshipStatus: "resident",
-          photoID: data.photoId?.[0],
-          socialSecurityCard: data.ssn?.[0],
-          residentCard: data.residentCard?.[0],
-        };
+        setFormData((prev) => {
+          updatedData = {
+            ...prev,
+            citizenShipForm: "resident",
+            photoId: data.photoId?.[0],
+            socialSecurityCard: data.ssn?.[0],
+            residentCard: data.residentCard?.[0],
+          };
+        });
         break;
 
       case "WorkAuth":
-        citizenshipData = {
-          citizenshipStatus: "workauth",
-          photoID: data.photoId?.[0],
-          socialSecurityCard: data.ssn?.[0],
-          workAuthorizationDocument: data.workAuth,
-        };
+        setFormData((prev) => {
+          updatedData = {
+            ...prev,
+            citizenShipForm: "workauth",
+            photoId: data.photoId?.[0],
+            socialSecurityCard: data.ssn?.[0],
+            workAuthorizationDocument: data.workAuth,
+          };
+        });
         break;
 
       default:
         console.warn("Invalid citizenship type");
     }
-    let updatedData;
-    setFormData((prev) => {
-      updatedData = {
-        ...prev,
-        citizenShipForm: citizenshipData,
-      };
-      console.log("Updated formData:", updatedData);
-      return updatedData;
-    });
     handleFinalSubmit(updatedData);
-
-    console.log("Processed Citizenship Data:", citizenshipData);
   };
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
 
   // Render upload fields based on citizenship selection
   const renderUploadFields = () => {
@@ -412,35 +395,36 @@ const TempSelectCitizenShip = ({
           {/* Dynamic Upload Fields */}
           <div className="max-w-2xl mx-auto mt-8">{renderUploadFields()}</div>
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-center mt-6 gap-4">
-            <Button
-              type="button"
-              onClick={prevStep}
-              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            >
-              Previous
-            </Button>
-            <Button
+          <div className="mt-9 flex justify-center">
+            <button
               type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
+              className="w-80 py-3.5 bg-[#8D6851] text-white rounded-md font-medium hover:bg-[#9e7c5e] transition-colors"
             >
-              Next
-            </Button>
+              Submit Application
+            </button>
           </div>
 
-          {/* Info Section */}
           <div className="flex items-center max-w-2xl mx-auto gap-2 mt-8 text-gray-300">
             <CiCircleInfo className="text-3xl text-[#F4E53D]" />
             <div>
               <p className="text-sm mt-3.5">
                 You will need to review your application carefully, and if you
-                agree with everything, click on 'Next' to proceed.
+                agree with everything, click on 'Submit Application' to proceed.
               </p>
               <p className="text-sm text-center">
-                Only then will you be able to continue your application.
+                Only then will you be able to submit your application.
               </p>
             </div>
+          </div>
+
+          <div className="flex justify-center mt-6 gap-4">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            >
+              Previous
+            </button>
           </div>
         </form>
       </div>
@@ -448,4 +432,4 @@ const TempSelectCitizenShip = ({
   );
 };
 
-export default TempSelectCitizenShip;
+export default SelectCitizenShip;

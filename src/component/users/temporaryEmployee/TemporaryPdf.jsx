@@ -1,26 +1,57 @@
 import { Download, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
 import { getEmployees } from "../../../redux/feature/tempEmployee/tempEmployeeSlice";
+import { VITE_BASE_URL } from "../../../config";
+import { useRef } from "react";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const PdfViewer = () => {
-  //   const [employee, setemployee] = useState({});
   const dispatch = useDispatch();
-  const { employees, status } = useSelector((state) => state.tempEmployee);
+  const pdfRef = useRef();
+  const { employees, loading } = useSelector((state) => state.tempEmployee);
 
   useEffect(() => {
-    console.log("PdfViewer useEffect triggered");
     dispatch(getEmployees());
-  }, [dispatch]);
+  }, []);
+
   console.log(employees);
-  if (!employees) {
-    return <div>Loading...</div>;
+  console.log("Date", employees?.createdAt);
+  console.log(`${VITE_BASE_URL}/image${employees?.signature}`);
+  // formated date dd--mm--yy..
+  const formatedDate = (isoDate) => {
+    const date = new Date(isoDate).toLocaleDateString("en-GB");
+    return date;
+  };
+  if (!employees && loading) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen space-y-4">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-blue-600 font-medium">Loading employees...</p>
+      </div>
+    );
   }
 
-  const handleDownloadPDF = () => {
-    // Use browser's print to PDF feature
-    window.download();
+  const handleDownloadPDF = async () => {
+    const element = pdfRef.current;
+    if (!element) return;
+
+    // Capture the component as an image
+    const canvas = await html2canvas(element, { scale: 2 });
+    const imgData = canvas.toDataURL("image/png");
+
+    // Create a new PDF document
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`${employees?.generalInfo?.name || "document"}.pdf`);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   return (
@@ -46,10 +77,10 @@ const PdfViewer = () => {
           </div>
 
           {/* Page 1 */}
-          <div className="p-8 print:p-12 page-break">
-            <div className="flex justify-between">
-              {/* Header */}
-              <div className=" pb-4 mb-6">
+          <div className="p-8 print:p-12 page-break bg-white text-black font-sans text-sm leading-relaxed">
+            {/* Header */}
+            <div className="flex justify-between pb-4 mb-6 border-b border-black">
+              <div>
                 <h1 className="text-xl font-bold">CBYRAC, INC</h1>
                 <p className="text-sm mt-1">633 NE 167TH STREET, SUITE 709</p>
                 <p className="text-sm font-medium">
@@ -61,32 +92,40 @@ const PdfViewer = () => {
                 </p>
               </div>
               <div>
-                <img className="w-48 h-22" src="/cbyrac-logo.png" alt="" />
+                <img
+                  className="w-48 h-22 object-contain"
+                  src="/cbyrac-logo.png"
+                  alt="CBYRAC Logo"
+                />
               </div>
             </div>
-            <h2 className="bg-black text-white text-center text-lg font-bold mb-4">
+
+            <h2 className="bg-black text-white text-center text-lg font-bold py-2 mb-4">
               APPLICATION FOR EMPLOYMENT
             </h2>
 
-            <p className=" font-bold text-center mb-4">
+            <p className="font-bold text-center mb-4">
               Please Answer All Questions. Resumes Are Not A Substitute For A
               Completed Application.
             </p>
 
-            <div className="flex mb-4 justify-end font-medium">
-              <span>Date _________________________</span>
+            <div className="flex justify-end items-center font-medium mb-4 space-x-2">
+              <span>Date:</span>
+              <span className="border-b border-black min-w-[70px] text-right">
+                {formatedDate(employees?.createdAt) || "\u00A0"}
+              </span>
             </div>
 
-            <p className="text-[13px] mb-3 leading-relaxed font-medium">
+            <p className="text-xs mb-3">
               We are an equal opportunity employer. Applicants are considered
               for positions without regard to veteran status, uniformed
-              servicemember status, race color, religion, sex, national origin,
+              servicemember status, race, color, religion, sex, national origin,
               age, physical or mental disability, genetic information or any
               other category protected by applicable federal, state, or local
               laws.
             </p>
 
-            <p className="text-smmb-4 leading-relaxed font-semibold">
+            <p className="text-xs font-semibold mb-6">
               THIS COMPANY IS AN AT-WILL EMPLOYER AS ALLOWED BY APPLICABLE STATE
               LAW. THIS MEANS THAT REGARDLESS OF ANY PROVISION IN THIS
               APPLICATION, IF HIRED, THE COMPANY OR I MAY TERMINATE THE
@@ -95,191 +134,199 @@ const PdfViewer = () => {
             </p>
 
             {/* Personal Information */}
-            <div className="space-y-3 mb-4">
-              <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Last Name:</span>
+                  <span className="font-medium">Last Name:</span>
                   <span className="border-b border-black flex-1 min-w-[180px]">
-                    {employee?.generalInfo?.lastName || "\u00A0"}
+                    {employees?.generalInfo?.lastName || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">First Name:</span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-[180px]">
+                  <span className="font-medium">First Name:</span>
+                  <span className="border-b border-black flex-1 min-w-[180px]">
                     {employees?.generalInfo?.firstName || "\u00A0"}
                   </span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm font-medium">Middle Name:</span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-[150px]">
-                    {employees.generalInfo.middleName || "\u00A0"}
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Middle Name:</span>
+                  <span className="border-b border-black flex-1 min-w-[150px]">
+                    {employees?.generalInfo?.middleName || "\u00A0"}
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Social Security Number:
                   </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.ssn || "\u00A0"}
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.ssn || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    DOB:
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.dateOfBirth || "\u00A0"}
+                  <span className="font-medium whitespace-nowrap">DOB:</span>
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.dateOfBirth || "\u00A0"}
                   </span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Telephone Number:
                   </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.telephoneNumber || "\u00A0"}
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.telephoneNumber || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Email Address:
                   </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.emailAddress || "\u00A0"}
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.email || "\u00A0"}
                   </span>
                 </div>
               </div>
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Address:
                   </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.generalInfo.address || "\u00A0"}
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.address || "\u00A0"}
                   </span>
                 </div>
-                <p className="text-sm italic ml-16">
+                <p className="text-xs italic ml-16">
                   Street/Apartment/City/State/Zip
                 </p>
               </div>
 
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Emergency Contact Person:
                   </span>
-
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {/* ✅ Use inline-flex to allow horizontal spacing */}
-                    <span className="inline-flex space-x-20">
+                  <span className="border-b border-black flex-1">
+                    <span className="inline-flex justify-between w-full px-2">
                       <span>
-                        {employees.generalInfo.emergencyContact.name ||
+                        {employees?.generalInfo?.emergencyContact?.name ||
                           "\u00A0"}
                       </span>
                       <span>
-                        {employees.generalInfo.emergencyContact.relationship ||
-                          "\u00A0"}
+                        {employees?.generalInfo?.emergencyContact
+                          ?.relationship || "\u00A0"}
                       </span>
                       <span>
-                        {employees.generalInfo.emergencyContact.phone ||
+                        {employees?.generalInfo?.emergencyContact?.phone ||
                           "\u00A0"}
                       </span>
                     </span>
                   </span>
                 </div>
-
-                <p className="text-sm italic ml-48">
-                  Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Relation&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Telephone
+                <p className="text-xs italic ml-48">
+                  Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Relation&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Telephone
                 </p>
               </div>
             </div>
 
             {/* Employment Type */}
-            <div className="space-y-2 mb-4">
+            <div className="space-y-3 mb-6">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">
-                  Type of employment desired? Intern ☐ Temporary ☐ Desired
-                  Salary/Hourly Rate
+                <span className="font-medium whitespace-nowrap">
+                  Type of employment desired?{"   "}
+                  {employees?.generalInfo?.appliedPosition === "Intern"
+                    ? `Intern [✅]`
+                    : `Temporary [✅]`}
+                  {"     . "}
+                  Desired Salary/Hourly Rate
                 </span>
-                <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  Desired Salary:
-                  {employees.generalInfo.desiredSalary || "\u00A0"}
-                  {` / `}
-                  Hourly rate :{employees.generalInfo.hourlyRate || "\u00A0"}
+                <span className="border-b border-black flex-1">
+                  Desired Salary:{" "}
+                  {employees?.generalInfo?.desiredSalary || "\u00A0"} / Hourly
+                  rate: {employees?.generalInfo?.hourlyRate || "\u00A0"}
                 </span>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
+                  <span className="font-medium whitespace-nowrap">
                     Position Applied For:
                   </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.appliedPosition || "\u00A0"}
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.appliedPosition || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Dept.:
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.department || "\u00A0"}
+                  <span className="font-medium whitespace-nowrap">Dept.:</span>
+                  <span className="border-b border-black flex-1">
+                    {employees?.generalInfo?.department || "\u00A0"}
                   </span>
                 </div>
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Are you willing to work overtime? Yes ☐ No ☐ Date on which
-                    you can start work if hired
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.generalInfo.startDate || "\u00A0"}
-                  </span>
-                </div>
+
+              <div className="flex items-center gap-2">
+                <span className="font-medium whitespace-nowrap">
+                  Are you willing to work overtime?{"  "}
+                  {employees?.generalInfo?.overtime === "Yes"
+                    ? `Yes [✅ ]`
+                    : `No [❌]`}
+                  {"     . "}
+                  Date on which you can start work if hired
+                </span>
+                <span className="border-b border-black flex-1">
+                  {employees?.generalInfo?.startDate || "\u00A0"}
+                </span>
               </div>
             </div>
 
             {/* Previous Employment Questions */}
-            <div className="space-y-2 mb-4">
+            <div className="space-y-2 mb-6">
               <div>
-                <span className="text-sm font-medium">
+                <span className="font-medium">
                   Have you previously applied for employment with this company?
-                  Yes ☐ No ☐
+                  {"  "}
+                  {employees?.generalInfo?.previouslyApplied
+                    ? `Yes [✅ ]`
+                    : `No [❌]`}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">
+                <span className="font-medium whitespace-nowrap">
                   If yes, when and where did you apply?
                 </span>
-                <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.generalInfo.previousApplicationDate || "\u00A0"}
+                <span className="border-b border-black flex-1">
+                  {employees?.generalInfo?.previousApplicationDate || "\u00A0"}
                 </span>
               </div>
+
               <div>
-                <span className="text-sm font-medium">
-                  Have you ever been employed by this Company? Yes ☐ No ☐
+                <span className="font-medium">
+                  Have you ever been employed by this Company?{"  "}
+                  {employees?.generalInfo?.previouslyEmployed
+                    ? `Yes [✅ ]`
+                    : `No [❌]`}
+                  {"     . "}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium whitespace-nowrap">
+                <span className="font-medium whitespace-nowrap">
                   If yes, provide dates of employment, location and reason for
                   separation from employment.
                 </span>
-                <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.generalInfo.previousSeparationReason || "\u00A0"}
+                <span className="border-b border-black flex-1">
+                  {employees?.generalInfo?.previousSeparationReason || "\u00A0"}
                 </span>
               </div>
             </div>
 
             {/* Education Section */}
             <h3 className="text-sm font-bold mb-2">Education</h3>
-            <table className="w-full border border-black mb-4">
+            <table className="w-full border border-black mb-6">
               <thead>
                 <tr className="border-b border-black">
                   <th className="border-r border-black p-1 text-left font-medium">
@@ -314,17 +361,18 @@ const PdfViewer = () => {
                     High School
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[0]?.major || "\u00A0"}
+                    {employees?.generalInfo?.education?.[0]?.major || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[0]?.graduationStatus ||
+                    {employees?.generalInfo?.education?.[0]?.graduationStatus ||
                       "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.gene?.education?.[0]?.yearsCompleted || "\u00A0"}
+                    {employees?.generalInfo?.education?.[0]?.yearsCompleted ||
+                      "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.generalInfo?.education?.[0]?.honorsReceived ||
+                    {employees?.generalInfo?.education?.[0]?.honorsReceived ||
                       "\u00A0"}
                   </td>
                 </tr>
@@ -333,18 +381,18 @@ const PdfViewer = () => {
                     College
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[1]?.major || "\u00A0"}
+                    {employees?.generalInfo?.education?.[1]?.major || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[1]?.graduationStatus ||
+                    {employees?.generalInfo?.education?.[1]?.graduationStatus ||
                       "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[1]?.yearsCompleted ||
+                    {employees?.generalInfo?.education?.[1]?.yearsCompleted ||
                       "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.generalInfo?.education?.[1]?.honorsReceived ||
+                    {employees?.generalInfo?.education?.[1]?.honorsReceived ||
                       "\u00A0"}
                   </td>
                 </tr>
@@ -353,18 +401,18 @@ const PdfViewer = () => {
                     Graduate/Professional
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[2]?.major || "\u00A0"}
+                    {employees?.generalInfo?.education?.[2]?.major || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[2]?.graduationStatus ||
+                    {employees?.generalInfo?.education?.[2]?.graduationStatus ||
                       "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[2]?.yearsCompleted ||
+                    {employees?.generalInfo?.education?.[2]?.yearsCompleted ||
                       "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.generalInfo?.education?.[2]?.honorsReceived ||
+                    {employees?.generalInfo?.education?.[2]?.honorsReceived ||
                       "\u00A0"}
                   </td>
                 </tr>
@@ -373,18 +421,18 @@ const PdfViewer = () => {
                     Trade or Correspondence
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[3]?.major || "\u00A0"}
+                    {employees?.generalInfo?.education?.[3]?.major || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[3]?.graduationStatus ||
+                    {employees?.generalInfo?.education?.[3]?.graduationStatus ||
                       "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.generalInfo?.education?.[3]?.yearsCompleted ||
+                    {employees?.generalInfo?.education?.[3]?.yearsCompleted ||
                       "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.generalInfo?.education?.[3]?.honorsReceived ||
+                    {employees?.generalInfo?.education?.[3]?.honorsReceived ||
                       "\u00A0"}
                   </td>
                 </tr>
@@ -417,14 +465,14 @@ const PdfViewer = () => {
                   <span className="font-medium">Employer 1</span>
                   <br />
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employees.employeeInfo.employee1?.name || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.name || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Name</span>
                 </div>
                 <div className="mt-6">
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employees.employeeInfo?.employee1?.address || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.address || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Address</span>
@@ -437,21 +485,23 @@ const PdfViewer = () => {
                     Telephone (____)
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {employees.employeeInfo.employee1?.telephone || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.telephone || "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     Dates Employed From
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employees.employeeInfo.employee1.dateEmployeeFrom ||
-                      "\u00A0"}
+                    {formatedDate(
+                      employees?.employeeInfo?.employee1?.dateEmployeeFrom
+                    ) || "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     To
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employees.employeeInfo.employee1.dateEmployeeTo ||
-                      "\u00A0"}
+                    {formatedDate(
+                      employees?.employeeInfo?.employee1?.dateEmployeeTo
+                    ) || "\u00A0"}
                   </span>
                 </div>
 
@@ -460,13 +510,13 @@ const PdfViewer = () => {
                     Job Title
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employees.employeeInfo?.employee1.jobTitle || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.jobTitle || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Duties
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employees.employeeInfo.employee1.duties || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.duties || "\u00A0"}
                   </span>
                 </div>
 
@@ -475,11 +525,15 @@ const PdfViewer = () => {
                     Supervisor's Name
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employees.employeeInfo.employee1?.supervisorName ||
+                    {employees?.employeeInfo?.employee1?.supervisorName ||
                       "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    May we contact? Yes ☐ No ☐ if No, why not?
+                    May we contact? {"  "}
+                    {employees?.employee?.employee1?.MayWeContact
+                      ? `Yes [✅ ]`
+                      : `No [❌]`}
+                    {"     . "} if No, why not?
                   </span>
                 </div>
 
@@ -488,19 +542,19 @@ const PdfViewer = () => {
                     Wages Start
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee1?.wagesStart || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.wagesStart || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Final
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee1?.final || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.final || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Reason for Leaving?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee1?.reasonForLeaving ||
+                    {employees?.employeeInfo?.employee1?.reasonForLeaving ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -511,7 +565,7 @@ const PdfViewer = () => {
                     terminated?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee1?.terminationReason ||
+                    {employees?.employeeInfo?.employee1?.terminationReason ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -521,7 +575,7 @@ const PdfViewer = () => {
                     Were you ever disciplined? If so, for what?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee1?.disciplinaryAction ||
+                    {employees?.employeeInfo?.employee1?.disciplinaryAction ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -532,7 +586,8 @@ const PdfViewer = () => {
                     explain.
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee1?.noticePeriod || "\u00A0"}
+                    {employees?.employeeInfo?.employee1?.noticePeriod ||
+                      "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -546,14 +601,14 @@ const PdfViewer = () => {
                   <span className="font-medium">Employer 2</span>
                   <br />
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employeeInfo.employee2?.name || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.name || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Name</span>
                 </div>
                 <div className="mt-6">
                   <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employeeInfo.employee2?.address || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.address || "\u00A0"}
                   </span>
                   <br />
                   <span className="">Address</span>
@@ -566,21 +621,23 @@ const PdfViewer = () => {
                     Telephone (____)
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {employee.employeeInfo.employee2?.telephone || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.telephone || "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     Dates Employed From
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee2?.dateEmployeeFrom ||
-                      "\u00A0"}
+                    {formatedDate(
+                      employees?.employeeInfo?.employee2?.dateEmployeeFrom
+                    ) || "\u00A0"}
                   </span>
                   <span className="text-sm font-medium whitespace-nowrap">
                     To
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee2?.dateEmployeeTo ||
-                      "\u00A0"}
+                    {formatedDate(
+                      employees?.employeeInfo?.employee2?.dateEmployeeTo
+                    ) || "\u00A0"}
                   </span>
                 </div>
 
@@ -589,13 +646,13 @@ const PdfViewer = () => {
                     Job Title
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employeeInfo.employee2?.jobTitle || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.jobTitle || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Duties
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee2?.duties || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.duties || "\u00A0"}
                   </span>
                 </div>
 
@@ -604,11 +661,16 @@ const PdfViewer = () => {
                     Supervisor's Name
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employeeInfo.employee2?.supervisorName ||
+                    {employees?.employeeInfo?.employee2?.supervisorName ||
                       "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    May we contact? Yes ☐ No ☐ if No, why not?
+                    May we contact? {"  "}{" "}
+                    {employees?.employeeInfo?.employee1?.MayWeContact
+                      ? `Yes [✅ ]`
+                      : `No [❌]`}
+                    {"     . "}
+                    if No, why not?
                   </span>
                 </div>
 
@@ -617,19 +679,19 @@ const PdfViewer = () => {
                     Wages Start
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee2?.wagesStart || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.wagesStart || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Final
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employeeInfo.employee2?.final || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.final || "\u00A0"}
                   </span>
                   <span className="text-sm ml-4 font-medium whitespace-nowrap">
                     Reason for Leaving?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee2?.reasonForLeaving ||
+                    {employees?.employeeInfo?.employee2?.reasonForLeaving ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -640,7 +702,7 @@ const PdfViewer = () => {
                     terminated?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee2?.terminationReason ||
+                    {employees?.employeeInfo?.employee2?.terminationReason ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -650,7 +712,7 @@ const PdfViewer = () => {
                     Were you ever disciplined? If so, for what?
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee2?.disciplinaryAction ||
+                    {employees?.employeeInfo?.employee2?.disciplinaryAction ||
                       "\u00A0"}
                   </span>
                 </div>
@@ -661,164 +723,61 @@ const PdfViewer = () => {
                     explain.
                   </span>
                   <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employeeInfo.employee2?.noticePeriod || "\u00A0"}
+                    {employees?.employeeInfo?.employee2?.noticePeriod ||
+                      "\u00A0"}
                   </span>
                 </div>
               </div>
             </div>
             <div className="border-2 mb-5"></div>
-            {/* Employer 3 */}
-            {/* <div className="mb-6">
-              <div className="grid grid-cols-2 gap-4 mb-2">
-                <div>
-                  <span className="font-medium">Employer 3</span>
-                  <br />
-                  <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employer3?.name || "\u00A0"}
-                  </span>
-                  <br />
-                  <span className="">Name</span>
-                </div>
-                <div className="mt-6">
-                  <span className="text-sm font-medium border-b border-black inline-block w-full min-w-0">
-                    {employee.employer3?.address || "\u00A0"}
-                  </span>
-                  <br />
-                  <span className="">Address</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Telephone (____)
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {employee.employer3?.telephone || "\u00A0"}
-                  </span>
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Dates Employed From
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employer3?.dateFrom || "\u00A0"}
-                  </span>
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    To
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employer3?.dateTo || "\u00A0"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Job Title
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employer3?.jobTitle || "\u00A0"}
-                  </span>
-                  <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    Duties
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employer3?.duties || "\u00A0"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Supervisor's Name
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-48">
-                    {employee.employer3?.supervisorName || "\u00A0"}
-                  </span>
-                  <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    May we contact? Yes ☐ No ☐ if No, why not?
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Wages Start
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employer3?.wagesStart || "\u00A0"}
-                  </span>
-                  <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    Final
-                  </span>
-                  <span className="text-sm font-medium border-b border-black inline-block w-32">
-                    {employee.employer3?.wagesFinal || "\u00A0"}
-                  </span>
-                  <span className="text-sm ml-4 font-medium whitespace-nowrap">
-                    Reason for Leaving?
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employer3?.reasonLeaving || "\u00A0"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    What will this employer say was the reason your employment
-                    terminated?
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employer3?.terminationReason || "\u00A0"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    Were you ever disciplined? If so, for what?
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employer3?.disciplined || "\u00A0"}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium whitespace-nowrap">
-                    How much notice did you give when resigning? If none,
-                    explain.
-                  </span>
-                  <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                    {employee.employer3?.notice || "\u00A0"}
-                  </span>
-                </div>
-              </div>
-            </div> */}
 
             {/* Termination Questions */}
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
                   Have you ever been terminated or asked to resign from any job?
-                  Yes ☐ No ☐ If Yes how many times?
+                  {"  "}{" "}
+                  {employees?.employeeInfo?.terminationInfo
+                    ?.terminationStatus === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "}
+                  If Yes how many times?
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-20">
-                  {employee.employeeInfo.terminationInfo?.terminationCount ||
+                  {employees?.employeeInfo?.terminationInfo?.terminationCount ||
                     "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
                   Has your employment ever been terminated by mutual agreement?
-                  Yes ☐ No ☐ If Yes how many times?
+                  {"  "}{" "}
+                  {employees?.employeeInfo?.manualAgreementTermination
+                    ?.terminatedByManualAgreement === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "}
+                  If Yes how many times?
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-20">
-                  {employee.employeeInfo.manualAgreementTermination
-                    .terminationCount || "\u00A0"}
+                  {employees?.employeeInfo?.manualAgreementTermination
+                    ?.terminationCount || "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
                   Have you ever been given the choice to resign rather than be
-                  terminated? Yes ☐ No ☐ If Yes how many times?
+                  terminated? {"  "}{" "}
+                  {employees?.employeeInfo?.resignationInsteadOfTermination
+                    ?.resignedInsteadOfTerminated === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "} If Yes how many times?
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-20">
-                  {employee.employeeInfo.resignationInsteadOfTermination
-                    .resignationCount || "\u00A0"}
+                  {employees?.employeeInf?.resignationInsteadOfTermination
+                    ?.resignationCount || "\u00A0"}
                 </span>
               </div>
               <div>
@@ -828,10 +787,9 @@ const PdfViewer = () => {
                 </span>
               </div>
             </div>
-            <div className="border mb-6"></div>
-            <div className="border mb-6"></div>
-            <div className="border mb-6"></div>
-            <div className="border mb-6"></div>
+            <div className="underline mb-6">
+              {employees?.employeeInfo?.explanation}
+            </div>
             {/* References Section */}
             <h3 className="text-sm font-bold mb-2">REFERENCES (Optional)</h3>
             <p className="text-sm mb-3 font-medium">
@@ -863,67 +821,67 @@ const PdfViewer = () => {
               <tbody>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.position || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.company || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.workRelation || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.telephone || "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[1]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[1]
                       ?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[1]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[1]
                       ?.position || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[1]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[1]
                       ?.company || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[1]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[1]
                       ?.workRelation || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[1]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[1]
                       ?.telephone || "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8">
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.position || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.company || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.workRelation || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.employeeInfo.terminationDetailsOfEmployee?.[0]
+                    {employees?.employeeInfo?.terminationDetailsOfEmployee?.[0]
                       ?.telephone || "\u00A0"}
                   </td>
                 </tr>
@@ -965,55 +923,55 @@ const PdfViewer = () => {
               <tbody>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[0]?.name || "\u00A0"}
+                    {employees?.personalReferences?.[0]?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[0]?.occupation || "\u00A0"}
+                    {employees?.personalReferences?.[0]?.occupation || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[0]?.telephone || "\u00A0"}
+                    {employees?.personalReferences?.[0]?.telephone || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[0]?.yearsKnown || "\u00A0"}
+                    {employees?.personalReferences?.[0]?.yearsKnown || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.personalReferences?.[0]?.bestTimeToCall ||
+                    {employees?.personalReferences?.[0]?.bestTimeToCall ||
                       "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[1]?.name || "\u00A0"}
+                    {employees?.personalReferences?.[1]?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[1]?.occupation || "\u00A0"}
+                    {employees?.personalReferences?.[1]?.occupation || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[1]?.telephone || "\u00A0"}
+                    {employees?.personalReferences?.[1]?.telephone || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[1]?.yearsKnown || "\u00A0"}
+                    {employees?.personalReferences?.[1]?.yearsKnown || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.personalReferences?.[1]?.bestTimeToCall ||
+                    {employees?.personalReferences?.[1]?.bestTimeToCall ||
                       "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8">
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[2]?.name || "\u00A0"}
+                    {employees?.personalReferences?.[2]?.name || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[2]?.occupation || "\u00A0"}
+                    {employees?.personalReferences?.[2]?.occupation || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[2]?.telephone || "\u00A0"}
+                    {employees?.personalReferences?.[2]?.telephone || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.personalReferences?.[2]?.yearsKnown || "\u00A0"}
+                    {employees?.personalReferences?.[2]?.yearsKnown || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.personalReferences?.[2]?.bestTimeToCall ||
+                    {employees?.personalReferences?.[2]?.bestTimeToCall ||
                       "\u00A0"}
                   </td>
                 </tr>
@@ -1025,12 +983,16 @@ const PdfViewer = () => {
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
-                  Do you have a current valid driver's license? Yes ☐ No ☐ If
-                  yes, License No.:
+                  Do you have a current valid driver's license? {"  "}{" "}
+                  {employees?.drivingLicenceInfo?.validDriverLicense
+                    ?.hasDriverLicense === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "}If yes, License No.:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-48">
-                  {employee.drivingLicenceInfo.validDriverLicense.licenseNo ||
-                    "\u00A0"}
+                  {employees?.drivingLicenceInfo?.validDriverLicense
+                    ?.licenseNo || "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1038,15 +1000,17 @@ const PdfViewer = () => {
                   State:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-32">
-                  {employee.drivingLicenceInfo.validDriverLicense.state ||
+                  {employees?.drivingLicenceInfo?.validDriverLicense?.state ||
                     "\u00A0"}
                 </span>
                 <span className="text-sm font-medium whitespace-nowrap ml-4">
                   Expiration Date:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-48">
-                  {employee.drivingLicenceInfo.validDriverLicense
-                    .expirationDate || "\u00A0"}
+                  {formatedDate(
+                    employees?.drivingLicenceInfo?.validDriverLicense
+                      ?.expirationDate
+                  ) || "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1055,33 +1019,46 @@ const PdfViewer = () => {
                   you currently reside, why not?
                 </span>
                 <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.driverLicense?.noLicenseReason || "\u00A0"}
+                  {employees?.driverLicense?.noLicenseReason || "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
-                  Has your license ever been suspended or revoked? Yes ☐ No ☐ If
-                  yes, explain
+                  Has your license ever been suspended or revoked? {"  "}{" "}
+                  {employees?.drivingLicenceInfo?.licenseSuspensionInfo
+                    ?.licenseSuspendedOrRevoked === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "}If yes, explain
                 </span>
                 <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.drivingLicenceInfo.licenseSuspensionInfo.reason ||
-                    "\u00A0"}
+                  {employees?.drivingLicenceInfo?.licenseSuspensionInfo
+                    ?.reason || "\u00A0"}
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium whitespace-nowrap">
-                  Do you have personal automobile insurance? Yes ☐ No ☐ If no,
-                  explain
+                  Do you have personal automobile insurance? {"  "}{" "}
+                  {employees?.drivingLicenceInfo?.personalAutoInsurance
+                    ?.hasPersonalAutoInsurance === "Yes"
+                    ? `Yes [❌]`
+                    : `No [✅]`}
+                  {"     . "}If no, explain
                 </span>
                 <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.drivingLicenceInfo?.personalAutoInsurance.reason ||
-                    "\u00A0"}
+                  {employees?.drivingLicenceInfo?.personalAutoInsurance
+                    ?.reason || "\u00A0"}
                 </span>
               </div>
               <div>
                 <span className="text-sm font-medium">
                   Have you ever been denied personal automobile insurance or has
-                  it ever been terminated or suspended? Yes ☐ No ☐
+                  it ever been terminated or suspended? {"  "}{" "}
+                  {employees?.drivingLicenceInfo?.personalAutoInsuranceHistory
+                    ?.insuranceDeniedOrTerminated === "Yes"
+                    ? `Yes [✅]`
+                    : `No [❌]`}
+                  {"     . "}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -1089,8 +1066,8 @@ const PdfViewer = () => {
                   If yes, explain
                 </span>
                 <span className="text-sm font-medium border-b border-black flex-1 min-w-0">
-                  {employee.drivingLicenceInfo.personalAutoInsuranceHistory
-                    .reason || "\u00A0"}
+                  {employees?.drivingLicenceInfo?.personalAutoInsuranceHistory
+                    ?.reason || "\u00A0"}
                 </span>
               </div>
             </div>
@@ -1118,55 +1095,61 @@ const PdfViewer = () => {
               <tbody>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[0]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[0]
                       ?.offense || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[0]
-                      ?.date || "\u00A0"}
+                    {formatedDate(
+                      employees?.drivingLicenceInfo?.movingTrafficViolation?.[0]
+                        ?.date
+                    ) || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[0]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[0]
                       ?.location || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[0]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[0]
                       ?.comment || "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8 border-b border-black">
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[1]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[1]
                       ?.offense || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[1]
-                      ?.date || "\u00A0"}
+                    {formatedDate(
+                      employees?.drivingLicenceInfo?.movingTrafficViolation?.[1]
+                        ?.date
+                    ) || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[1]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[1]
                       ?.location || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[1]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[1]
                       ?.comment || "\u00A0"}
                   </td>
                 </tr>
                 <tr className="h-8">
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[2]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[2]
                       ?.offense || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[2]
-                      ?.date || "\u00A0"}
+                    {formatedDate(
+                      employees?.drivingLicenceInfo?.movingTrafficViolation?.[2]
+                        ?.date
+                    ) || "\u00A0"}
                   </td>
                   <td className="border-r border-black p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[2]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[2]
                       ?.location || "\u00A0"}
                   </td>
                   <td className="p-1">
-                    {employee.drivingLicenceInfo.movingTrafficViolation?.[2]
+                    {employees?.drivingLicenceInfo?.movingTrafficViolation?.[2]
                       ?.comment || "\u00A0"}
                   </td>
                 </tr>
@@ -1325,13 +1308,21 @@ const PdfViewer = () => {
                 Applicant Signature
               </span>
               <span className="font-medium border-b border-black inline-block w-80">
-                {`${import.meta.env.VITE_BASE_URL}${
-                  employee.applicantCartification.signature
-                }` || "\u00A0"}
+                {employees?.signature ? (
+                  <img
+                    src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                    alt="Employee Signature"
+                    className="h-8 w-28 border"
+                  />
+                ) : (
+                  <span>&nbsp;</span>
+                )}
               </span>
               <span className="ml-8 font-medium whitespace-nowrap">Date</span>
               <span className="font-medium border-b border-black inline-block w-48">
-                {employee.applicantCartification.signatureDate || "\u00A0"}
+                {formatedDate(
+                  employees?.applicantCartification?.signatureDate
+                ) || "\u00A0"}
               </span>
             </div>
 
@@ -1351,21 +1342,21 @@ const PdfViewer = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="whitespace-nowrap">Job Description:</span>
                   <span className="border-b border-black inline-block w-60">
-                    {employee.companyUse?.jobDescription || "\u00A0"}
+                    {employees?.companyUse?.jobDescription || "\u00A0"}
                   </span>
                   <span className="ml-4 whitespace-nowrap">W/C Code:</span>
                   <span className="border-b border-black inline-block w-28">
-                    {employee.companyUse?.wcCode || "\u00A0"}
+                    {employees?.companyUse?.wcCode || "\u00A0"}
                   </span>
                   <span className="ml-4 whitespace-nowrap">Hire Date:</span>
                   <span className="border-b border-black inline-block w-40">
-                    {employee.companyUse?.hireDate || "\u00A0"}
+                    {employees?.companyUse?.hireDate || "\u00A0"}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="whitespace-nowrap">Termination:</span>
                   <span className="border-b border-black inline-block w-40">
-                    {employee.companyUse?.termination || "\u00A0"}
+                    {employees?.companyUse?.termination || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -1376,7 +1367,7 @@ const PdfViewer = () => {
                     Pay Rate: ☐ Hourly $
                   </span>
                   <span className="border-b border-black inline-block w-32">
-                    {employee.companyUse?.hourlyRate || "\u00A0"}
+                    {employees?.companyUse?.hourlyRate || "\u00A0"}
                   </span>
                   <span className="whitespace-nowrap">
                     per hour ☐ Commission
@@ -1387,7 +1378,7 @@ const PdfViewer = () => {
                     ☐ Salary O.T. Exempt $
                   </span>
                   <span className="border-b border-black inline-block w-32">
-                    {employee.companyUse?.salaryOTExempt || "\u00A0"}
+                    {employees?.companyUse?.salaryOTExempt || "\u00A0"}
                   </span>
                   <span className="whitespace-nowrap">per pay period</span>
                 </div>
@@ -1396,7 +1387,7 @@ const PdfViewer = () => {
                     ☐ Salary O.T. Non-Exempt $
                   </span>
                   <span className="border-b border-black inline-block w-32">
-                    {employee.companyUse?.salaryOTNonExempt || "\u00A0"}
+                    {employees?.companyUse?.salaryOTNonExempt || "\u00A0"}
                   </span>
                   <span className="whitespace-nowrap">per pay period</span>
                 </div>
@@ -1411,11 +1402,11 @@ const PdfViewer = () => {
                   Regular rate (1st 40 hours) = $
                 </span>
                 <span className="border-b border-black inline-block w-32">
-                  {employee.companyUse?.regularRate || "\u00A0"}
+                  {employees?.companyUse?.regularRate || "\u00A0"}
                 </span>
                 <span className="ml-8 whitespace-nowrap">O.T. Rate = $</span>
                 <span className="border-b border-black inline-block w-32">
-                  {employee.companyUse?.otRate || "\u00A0"}
+                  {employees?.companyUse?.otRate || "\u00A0"}
                 </span>
               </div>
               <div className="mb-4 font-medium flex items-center gap-2">
@@ -1423,13 +1414,13 @@ const PdfViewer = () => {
                   **Work Hours per pay period:
                 </span>
                 <span className="border-b border-black inline-block w-32">
-                  {employee.companyUse?.workHours || "\u00A0"}
+                  {employees?.companyUse?.workHours || "\u00A0"}
                 </span>
               </div>
               <div className="mb-4 font-medium flex items-center gap-2">
                 <span className="whitespace-nowrap">☐ Other:</span>
                 <span className="border-b border-black flex-1 min-w-0">
-                  {employee.companyUse?.other || "\u00A0"}
+                  {employees?.companyUse?.other || "\u00A0"}
                 </span>
               </div>
 
@@ -1439,11 +1430,11 @@ const PdfViewer = () => {
               <div className="font-medium flex items-center gap-2 flex-wrap">
                 <span className="whitespace-nowrap">Received By:</span>
                 <span className="border-b border-black inline-block w-64">
-                  {employee.hrUse?.receivedBy || "\u00A0"}
+                  {employees?.hrUse?.receivedBy || "\u00A0"}
                 </span>
                 <span className="ml-4 whitespace-nowrap">Date:</span>
                 <span className="border-b border-black inline-block w-40">
-                  {employee.hrUse?.date || "\u00A0"}
+                  {employees?.hrUse?.date || "\u00A0"}
                 </span>
               </div>
             </div>
@@ -1694,7 +1685,7 @@ const PdfViewer = () => {
               <p className="text-sm font-bold mt-2 flex items-center gap-2">
                 <span className="whitespace-nowrap">Initial</span>
                 <span className="border-b border-black inline-block w-64">
-                  {employee.substanceAbuse?.initial || "\u00A0"}
+                  {employees?.substanceAbuse?.initial || "\u00A0"}
                 </span>
               </p>
             </div>
@@ -1808,14 +1799,18 @@ const PdfViewer = () => {
               <div className="flex items-center gap-8">
                 <div className="flex-1">
                   <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {`${import.meta.VITE_BASE_URL} ${
-                      employee.accidentProcedure.signature
-                    }` || "\u00A0"}
+                    <img
+                      src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                      alt="Employee Signature"
+                      className="h-8 w-28 border"
+                    />
                   </span>
                 </div>
                 <div>
                   <span className="text-sm font-medium border-b border-black inline-block w-40">
-                    {employee.accidentProcedure.signatureDate || "\u00A0"}
+                    {formatedDate(
+                      employees?.accidentProcedure?.signatureDate
+                    ) || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -1889,8 +1884,8 @@ const PdfViewer = () => {
                   Name:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.submittalPolicy.submittalPolicyDirectUnderstand
-                    .name || "\u00A0"}
+                  {employees?.submittalPolicy?.submittalPolicyDirectUnderstand
+                    ?.name || "\u00A0"}
                 </span>
               </div>
               <div className="mb-1">
@@ -1898,9 +1893,11 @@ const PdfViewer = () => {
                   Signature:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {`${import.meta.VITE_BASE_URL}${
-                    employee.submittalPolicy.signature
-                  }` || "\u00A0"}
+                  <img
+                    src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                    alt="Employee Signature"
+                    className="h-8 w-28 border"
+                  />
                 </span>
               </div>
               <div>
@@ -1908,7 +1905,7 @@ const PdfViewer = () => {
                   Date:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.date || "\u00A0"}
+                  {formatedDate(employees?.createdAt) || "\u00A0"}
                 </span>
               </div>
             </div>
@@ -1921,8 +1918,8 @@ const PdfViewer = () => {
                   Name:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.submittalPolicy.submittalPolicyExplainUnderstand
-                    .name || "\u00A0"}
+                  {employees?.submittalPolicy?.submittalPolicyExplainUnderstand
+                    ?.name || "\u00A0"}
                 </span>
               </div>
               <div className="mb-1">
@@ -1930,19 +1927,21 @@ const PdfViewer = () => {
                   Signature:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {`${import.meta.VITE_BASE_URL}${
-                    employee.submittalPolicy.signature
-                  }` || "\u00A0"}
+                  <img
+                    src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                    alt="Employee Signature"
+                    className="h-8 w-28 border"
+                  />
                 </span>
               </div>
-              <div>
+              {/* <div>
                 <span className="text-sm font-medium whitespace-nowrap">
                   Date:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.date || "\u00A0"}
+                  {employees.date || "\u00A0"}
                 </span>
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -1964,7 +1963,7 @@ const PdfViewer = () => {
               <input
                 type="checkbox"
                 className="text-sm font-medium border-b border-black inline-block w-10 h-5"
-                checked={employee.newPayrollDeposit || false}
+                checked={employees?.newPayrollDeposit || false}
                 readOnly
               />
               <span className="text-sm font-medium whitespace-nowrap ml-4">
@@ -1973,7 +1972,7 @@ const PdfViewer = () => {
               <input
                 type="checkbox"
                 className="text-sm font-medium border-b border-black inline-block w-10 h-5"
-                checked={employee.changeDepositInfo || false}
+                checked={employees?.changeDepositInfo || false}
                 readOnly
               />
               <span className="text-sm font-medium whitespace-nowrap ">
@@ -1982,7 +1981,7 @@ const PdfViewer = () => {
               <input
                 type="checkbox"
                 className="text-sm font-medium border-b border-black inline-block w-10 h-5"
-                checked={employee.revokeAuthorization || false}
+                checked={employees?.revokeAuthorization || false}
                 readOnly
               />
             </div>
@@ -1992,7 +1991,7 @@ const PdfViewer = () => {
                   Date:
                 </span>
                 <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.date || "\u00A0"}
+                  {formatedDate(employees?.createdAt) || "\u00A0"}
                 </span>
               </div>
             </div>
@@ -2000,11 +1999,11 @@ const PdfViewer = () => {
               <div className="flex items-center gap-2">
                 <span className="text-lg whitespace-nowrap">Name:</span>
                 <span className="font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.name || "\u00A0"}
+                  {employees?.bankForm?.name || "\u00A0"}
                 </span>
                 <span className="text-lg whitespace-nowrap ml-4">SSN:</span>
                 <span className="font-medium border-b border-black inline-block w-40 ml-2">
-                  {employee.ssn || "\u00A0"}
+                  {employees?.bankForm?.ssn || "\u00A0"}
                 </span>
               </div>
             </div>
@@ -2038,11 +2037,11 @@ const PdfViewer = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-lg whitespace-nowrap">Bank Name:</span>
                   <span className="text-sm font-medium border-b border-black inline-block w-48 ml-2">
-                    {employee.bankName || "\u00A0"}
+                    {employees?.bankForm?.checkingAccount?.bankName || "\u00A0"}
                   </span>
                   <span className="text-lg whitespace-nowrap ml-4">State:</span>
                   <span className="text-sm font-medium border-b border-black inline-block w-20 ml-2">
-                    {employee.state || "\u00A0"}
+                    {employees?.bankForm?.checkingAccount?.state || "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -2051,14 +2050,13 @@ const PdfViewer = () => {
                 <div className="flex items-center gap-2 justify-center">
                   <span className=" whitespace-nowrap">I wish to deposit:</span>
                   <span className="text-sm font-medium border-b border-black inline-block w-24 ml-2">
-                    {employee.depositAmount
-                      ? `$${employee.depositAmount}.00`
-                      : "\u00A0"}
+                    {employees?.bankForm?.checkingAccount?.depositType ||
+                      "\u00A0"}
                   </span>
                   <span className=" whitespace-nowrap ml-4">or:</span>
                   <span className="text-sm font-medium border-b border-black inline-block w-24 ml-2">
-                    {employee.depositPercentage
-                      ? `${employee.depositPercentage}% Net Pay`
+                    {employees?.bankForm?.checkingAccount?.depositPercentage
+                      ? `${employees?.bankForm?.checkingAccount?.depositPercentage}% Net Pay`
                       : "\u00A0"}
                   </span>
                 </div>
@@ -2070,13 +2068,15 @@ const PdfViewer = () => {
                     Transit/ABA No.:
                   </span>
                   <span className="text-lg border-b border-black inline-block w-32 ml-2">
-                    {employee.transitAbaNo || "\u00A0"}
+                    {employees?.bankForm?.checkingAccount?.transitNo ||
+                      "\u00A0"}
                   </span>
                   <span className="text-lg whitespace-nowrap ml-4">
                     Account No.:
                   </span>
                   <span className="text-sm font-medium border-b border-black inline-block w-40 ml-2">
-                    {employee.accountNo || "\u00A0"}
+                    {employees?.bankForm?.checkingAccount?.accountNo ||
+                      "\u00A0"}
                   </span>
                 </div>
               </div>
@@ -2086,9 +2086,26 @@ const PdfViewer = () => {
                 <p className="text-xs">
                   The numbers on the bottom of your voided check are used
                 </p>
-                <p className="text-xs">
-                  To make the electronic funds transfer directly to you account.
+                <p className="text-xs mb-4">
+                  To make the electronic funds transfer directly to your
+                  account.
                 </p>
+
+                <iframe
+                  src={`${VITE_BASE_URL}/image${employees?.accountFile}`}
+                  width="100%"
+                  height="300"
+                  title="PDF Preview"
+                />
+
+                <a
+                  href={`${VITE_BASE_URL}/image${employees?.accountFile}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  Open PDF in New Tab
+                </a>
               </div>
             </div>
 
@@ -2106,51 +2123,102 @@ const PdfViewer = () => {
               <div className="border-b-2 border-black flex items-center mx-auto mb-7"></div>
 
               <div className="mb-4">
-                <span className="text-lg">
-                  BANK NAME: ______________________________________________
+                <span className="text-lg whitespace-nowrap">Bank Name:</span>
+                <span className="text-sm font-medium border-b border-black inline-block w-48 ml-2">
+                  {employees?.bankForm?.savingsAccount?.bankName || "\u00A0"}
                 </span>
-                <span className="ml-4 text-lg">STATE: ________________</span>
+                <span className="text-lg whitespace-nowrap ml-4">State:</span>
+                <span className="text-sm font-medium border-b border-black inline-block w-20 ml-2">
+                  {employees?.bankForm?.checkingAccount?.state || "\u00A0"}
+                </span>
               </div>
               <div className="mb-4 text-center">
-                <span className="">
-                  I wish to deposit $____________.00 or __________% Net Pay
+                <span className=" whitespace-nowrap">I wish to deposit:</span>
+                <span className="text-sm font-medium border-b border-black inline-block w-24 ml-2">
+                  {employees?.bankForm?.checkingAccount?.depositType ||
+                    "\u00A0"}
+                </span>
+                <span className=" whitespace-nowrap ml-4">or:</span>
+                <span className="text-sm font-medium border-b border-black inline-block w-24 ml-2">
+                  {employees?.bankForm?.savingsAccount?.depositPercentage
+                    ? `${employees?.bankForm?.savingsAccount?.depositPercentage}% Net Pay`
+                    : "\u00A0"}
                 </span>
               </div>
-              <div className="mb-4">
+              <div className="flex items-center gap-2 font-medium mb-4">
                 <span className="text-lg">
-                  SAVINGS BANK/ROUTING OR TRANSIT NUMBER________________________
-                  (This Must Be 9 Digits)
+                  SAVINGS BANK/ROUTING OR TRANSIT NUMBER:
                 </span>
+                <span className="border-b border-black flex-1 min-w-[220px]">
+                  {/* Replace with actual value if available */}
+                  {employees?.bankForm?.savingsAccount?.transitNo || "\u00A0"}
+                </span>
+                <span className="text-sm ml-2">(This Must Be 9 Digits)</span>
               </div>
 
-              <span className="text-lg">
-                EMPLOYEE SAVINGS ACCOUNT NUMBER
-                __________________________________________________
+              {/* Employee Savings Account Number */}
+              <div className="flex items-center gap-2">
+                <span className="text-lg">
+                  EMPLOYEE SAVINGS ACCOUNT NUMBER:
+                </span>
+                <span className="border-b border-black flex-1 min-w-[220px]">
+                  {employees?.bankForm?.savingsAccount?.accountNo || "\u00A0"}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg whitespace-nowrap">
+                EMPLOYEE SIGNATURE:
+              </span>
+              <span className="border-b border-black flex-1 min-w-[220px] h-12 flex items-center">
+                {employees?.signature ? (
+                  <img
+                    src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                    alt="Employee Signature"
+                    className="h-8 w-28 border"
+                  />
+                ) : (
+                  <span>&nbsp;</span>
+                )}
               </span>
             </div>
-            <span className="ml-4 text-lg">
-              EMPLOYEE SIGNATURE __________________________________
-            </span>
-            <span className="ml-4 text-lg">DATE ________________________</span>
+
+            {/* Date */}
+            <div className="flex items-center gap-2">
+              <span className="text-lg">DATE:</span>
+              <span className="border-b border-black flex-1 min-w-[180px]">
+                {formatedDate(employees?.createdAt) || "\u00A0"}
+              </span>
+            </div>
           </div>
 
           {/* Page 9 - Document Checklist */}
+
           <div className="p-8 print:p-12 page-break">
             <div className="text-right text-sm mb-4">9</div>
           </div>
         </div>
 
-        <style>{`
-        @media print {
-          .page-break {
-            page-break-after: always;
+        <style jsx>{`
+          @media print {
+            .page-break {
+              page-break-after: always;
+            }
+            body,
+            .pdf-container {
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+            }
+            * {
+              -webkit-print-color-adjust: exact !important;
+              color-adjust: exact !important;
+            }
+            .print\\:hidden {
+              display: none !important;
+            }
           }
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-        }
-      `}</style>
+        `}</style>
       </div>
     </div>
   );

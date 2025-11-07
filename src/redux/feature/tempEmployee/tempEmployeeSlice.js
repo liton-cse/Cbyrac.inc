@@ -85,7 +85,7 @@ const employeeSlice = createSlice({
       })
       .addCase(addEmployee.fulfilled, (state, action) => {
         state.status = "succeeded";
-        state.employees.push(action.payload);
+        state.employees = action.payload;
       })
       .addCase(addEmployee.rejected, (state, action) => {
         state.status = "failed";
