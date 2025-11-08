@@ -1,17 +1,17 @@
 import { Download, Printer } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { fetchEmployees } from "../../../redux/feature/Internemployee/internSlice";
 import { VITE_BASE_URL } from "../../../config";
-import { useRef } from "react";
-import html2canvas from "html2canvas";
+
 import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const InternPdfViewer = () => {
   const dispatch = useDispatch();
-  const pdfRef = useRef(null);
-  const { employees, status } = useSelector((state) => state.internEmployee);
 
+  const { employees, status } = useSelector((state) => state.internEmployee);
+  const targetRef = useRef(null);
   useEffect(() => {
     dispatch(fetchEmployees());
   }, []);
@@ -19,68 +19,55 @@ const InternPdfViewer = () => {
   const handlePrint = () => {
     window.print();
   };
+  const downloadPdf = () => {
+    const input = targetRef.current;
+    if (!input) return;
 
-  const handleDownloadPDF = async () => {
-    if (!pdfRef.current) return;
-
-    const element = pdfRef.current;
-
-    try {
-      // ✅ Hide print-only buttons or elements
-      const buttons = element.querySelectorAll(".print\\:hidden");
-      buttons.forEach((btn) => (btn.style.visibility = "hidden"));
-
-      // ✅ Fix for Tailwind OKLCH colors
-      const allElements = element.querySelectorAll("*");
-      const originalBackgrounds = [];
-
-      allElements.forEach((el, index) => {
-        const style = window.getComputedStyle(el);
-        const bg = style.backgroundColor;
-        if (bg && bg.includes("oklch")) {
-          originalBackgrounds[index] = el.style.backgroundColor;
-          el.style.backgroundColor = "#ffffff"; // fallback to white
-        }
-      });
-
-      // ✅ Capture as canvas
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight,
-      });
-
+    html2canvas(input, { scale: 2 }).then((canvas) => {
       const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF("p", "mm", "a4"); // Portrait, millimeters, A4 size
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = (pdfHeight - imgHeight * ratio) / 2;
 
-      // ✅ Create PDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(
-        `Employment_Application_${
-          employees?.generalInfo?.firstName || "Intern"
-        }.pdf`
+      pdf.addImage(
+        imgData,
+        "PNG",
+        imgX,
+        imgY,
+        imgWidth * ratio,
+        imgHeight * ratio
       );
-
-      // ✅ Restore hidden buttons and colors
-      buttons.forEach((btn) => (btn.style.visibility = ""));
-      allElements.forEach((el, index) => {
-        if (originalBackgrounds[index]) {
-          el.style.backgroundColor = originalBackgrounds[index];
-        }
-      });
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-    }
+      pdf.save("downloaded-component.pdf");
+    });
   };
+  // Send PDF automatically when data is ready
+  // useEffect(() => {
+  //   const sendPDF = async () => {
+  //     if (!employees) return; // wait until employees data is loaded
+
+  //     // generate PDF blob
+  //     const pdfBlob = await toPDF();
+  //     console.log(pdfBlob);
+
+  //     // prepare FormData to send to backend
+  //     const formData = new FormData();
+  //     formData.append("pdf", pdfBlob, "employee.pdf");
+  //     formData.append("email", import.meta.env.EMAIL);
+
+  //     // send to backend API
+  //     await fetch("https://your-backend.com/api/send-pdf", {
+  //       method: "POST",
+  //       body: formData,
+  //     });
+  //   };
+
+  //   sendPDF();
+  // }, [employees]);
 
   const formatedDate = (isoDate) => {
     const date = new Date(isoDate).toLocaleDateString("en-GB");
@@ -107,7 +94,7 @@ const InternPdfViewer = () => {
           Print Form
         </button>
         <button
-          onClick={handleDownloadPDF}
+          onClick={downloadPdf}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           <Download size={20} />
@@ -115,7 +102,7 @@ const InternPdfViewer = () => {
         </button>
       </div>
       <div
-        ref={pdfRef}
+        ref={targetRef}
         className="min-h-screen bg-gray-50 p-4 print:p-0 print:bg-white"
       >
         <div className="max-w-4xl mx-auto bg-white shadow-lg print:shadow-none">
