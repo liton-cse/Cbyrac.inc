@@ -2191,11 +2191,562 @@ const PdfViewer = () => {
               </span>
             </div>
           </div>
+          {/* Page 4 */}
+          <div>
+            <div className="p-8 print:p-12 page-break">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-2">
+                <div className="w-20 h-20 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full border-4 border-black flex items-center justify-center">
+                    <div className="text-center text-sm font-bold">
+                      <div>DHS</div>
+                      <div className="text-[6px]">
+                        DEPT OF
+                        <br />
+                        HOMELAND
+                        <br />
+                        SECURITY
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-1 text-center">
+                  <h1 className="text-lg font-bold">
+                    Employment Eligibility Verification
+                  </h1>
+                  <p className="text-xs font-semibold">
+                    Department of Homeland Security
+                  </p>
+                  <p className="text-xs">
+                    U.S. Citizenship and Immigration Services
+                  </p>
+                </div>
+                <div className="text-right text-xs">
+                  <p className="font-bold">USCIS</p>
+                  <p className="font-bold">Form I-9</p>
+                  <p>OMB No.1615-0047</p>
+                  <p>Expires 10/31/2027</p>
+                </div>
+              </div>
 
-          {/* Page 9 - Document Checklist */}
+              {/* START HERE Notice */}
+              <div className="bg-gray-100 border border-black p-2 mb-3 text-sm">
+                <p>
+                  <span className="font-bold">START HERE:</span> Employers must
+                  ensure the form instructions are available to employees when
+                  completing this form. Employers are liable for failing to
+                  comply with the requirements for completing this form. See
+                  below and the{" "}
+                  <span className="font-bold underline">Instructions</span>.
+                </p>
+              </div>
 
-          <div className="p-8 print:p-12 page-break">
-            <div className="text-right text-sm mb-4">9</div>
+              {/* Anti-Discrimination Notice */}
+              <div className="bg-gray-100 border border-black p-2 mb-3  text-sm">
+                <p>
+                  <span className="font-bold">ANTI-DISCRIMINATION NOTICE:</span>{" "}
+                  All employers and others who complete or use this form must
+                  present Form I-9. Employers cannot ask employees for
+                  documentation to verify information in Section 1, or specify
+                  which acceptable documentation employees must present for
+                  Section 2 or Supplement B, Reverification and Rehire. Treating
+                  employees differently based on their citizenship, immigration
+                  status, or national origin may be illegal.
+                </p>
+              </div>
+
+              {/* Section 1 Header */}
+              <div className="bg-gray-300 text-black p-1 mb-4 text-xs font-bold">
+                Section 1. Employee Information and Attestation: Employees must
+                complete and sign Section 1 of Form I-9 no later than the first
+                day of employment, but not before accepting a job offer.
+              </div>
+
+              {/* Personal Info */}
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">Last name</label>
+                  <div className="border border-black px-1 py-2 text-sm h-8">
+                    <p>{employees?.i9Form?.lastName}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">First name</label>
+                  <div className="border border-black px-1 py-2 text-sm h-8">
+                    <p>{employees?.i9Form?.firstName}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">
+                    Middle Initial (if any)
+                  </label>
+                  <div className="border border-black px-1 py-2 text-sm h-8">
+                    <p>{employees?.i9Form?.middleName}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-sm mb-1 block">
+                  Other Last Names Used (if any)
+                </label>
+                <div className="border border-black px-1 py-2 text-xs h-8 w-full">
+                  {employees?.i9Form?.otherNames}
+                </div>
+              </div>
+
+              {/* Address */}
+              <div className="grid grid-cols-12 gap-2 mb-3">
+                <div className="col-span-6 flex flex-col">
+                  <label className="text-sm mb-1">
+                    Address (Street Number and Name)
+                  </label>
+                  <div className="border border-black px-1 py-2 text-xs h-8">
+                    {employees?.i9Form?.address}
+                  </div>
+                </div>
+                <div className="col-span-2 flex flex-col">
+                  <label className="text-sm mb-1">Apt. Number (if any)</label>
+                  <div className="border border-black px-1 py-2 text-xs h-8"></div>
+                </div>
+                <div className="col-span-2 flex flex-col">
+                  <label className="text-sm mb-1">City or Town</label>
+                  <div className="border border-black px-1 py-2 text-xs h-8"></div>
+                </div>
+                <div className="col-span-1 flex flex-col">
+                  <label className="text-sm mb-1">State</label>
+                  <div className="border border-black px-1 py-2 text-xs h-8"></div>
+                </div>
+                <div className="col-span-1 flex flex-col">
+                  <label className="text-sm mb-1">ZIP Code</label>
+                  <div className="border border-black px-1 py-2 text-xs h-8"></div>
+                </div>
+              </div>
+
+              {/* Date of Birth, SSN, Email */}
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">
+                    Date of Birth (mm/dd/yyyy)
+                  </label>
+                  <div className="border border-black px-1 py-2 text-xs h-8">
+                    {employees?.i9Form?.dateOfBirth}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">
+                    U.S. Social Security Number
+                  </label>
+                  <div className="border border-black px-1 py-2 text-xs h-8">
+                    {employees?.i9Form?.ssn}
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-sm mb-1">
+                    Employee's Email Address
+                  </label>
+                  <div className="border border-black px-1 py-2 text-xs h-8">
+                    {employees?.i9Form?.email}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-3">
+                <label className="text-sm mb-1 block">
+                  Employee's Telephone Number
+                </label>
+                <div className="border border-black px-1 py-2 text-xs h-8 w-full">
+                  {employees?.i9Form?.phone}
+                </div>
+              </div>
+
+              {/* Citizenship Attestation */}
+              <div className="border border-black p-3 mb-3">
+                <div className="grid grid-cols-12 gap-2">
+                  <div className="col-span-3 border-r p-2 text-sm">
+                    <p className="font-medium">
+                      I am aware that federal law provides for imprisonment
+                      and/or fines for false statements, or the use of false
+                      documents, in connection with the completion of this form.
+                      I attest, under penalty of perjury, that this information,
+                      including my selection of the box attesting to my
+                      citizenship or immigration status, is true and correct.
+                    </p>
+                  </div>
+                  <div className="col-span-9">
+                    <p className="text-sm mb-2">
+                      Check one of the following boxes to attest to your
+                      citizenship or immigration status (See page 2 and 3 of the
+                      instructions):
+                    </p>
+                    <div className="space-y-1 text-sm">
+                      {/* 1. US Citizen */}
+                      <label className="flex items-start gap-2">
+                        <div className="w-3 h-3 border border-black mt-0.5 flex items-center justify-center">
+                          {employees?.i9Form?.status === "US Citizen" && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="black"
+                              className="w-3 h-3"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0l-3.25-3.25a1 1 0 1 1 1.414-1.414L8.5 11.086l6.543-6.543a1 1 0 0 1 1.664.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span>1. A citizen of the United States</span>
+                      </label>
+
+                      {/* 2. Noncitizen National */}
+                      <label className="flex items-start gap-2">
+                        <div className="w-3 h-3 border border-black mt-0.5 flex items-center justify-center">
+                          {employees?.i9Form?.status ===
+                            "Noncitizen National" && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="black"
+                              className="w-3 h-3"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0l-3.25-3.25a1 1 0 1 1 1.414-1.414L8.5 11.086l6.543-6.543a1 1 0 0 1 1.664.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span>
+                          2. A noncitizen national of the United States (See
+                          instructions.)
+                        </span>
+                      </label>
+
+                      {/* 3. Lawful Permanent Resident */}
+                      <label className="flex items-start gap-2">
+                        <div className="w-3 h-3 border border-black mt-0.5 flex items-center justify-center">
+                          {employees?.i9Form?.status ===
+                            "Lawful Permanent Resident" && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="black"
+                              className="w-3 h-3"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0l-3.25-3.25a1 1 0 1 1 1.414-1.414L8.5 11.086l6.543-6.543a1 1 0 0 1 1.664.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span>
+                          3. A lawful permanent resident (Enter USCIS or
+                          A-Number.)
+                        </span>
+                      </label>
+
+                      {/* 4. Other Noncitizen */}
+                      <label className="flex items-start gap-2">
+                        <div className="w-3 h-3 border border-black mt-0.5 flex items-center justify-center">
+                          {employees?.i9Form?.status === "Other Noncitizen" && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="black"
+                              className="w-3 h-3"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.25 7.25a1 1 0 0 1-1.414 0l-3.25-3.25a1 1 0 1 1 1.414-1.414L8.5 11.086l6.543-6.543a1 1 0 0 1 1.664.75z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          )}
+                        </div>
+                        <span>
+                          4. A noncitizen (Other than item Numbers 2 and 3,
+                          above) authorized to work until (exp. date, if any)
+                        </span>
+                      </label>
+                    </div>
+
+                    <p className="text-sm mt-2 font-semibold">
+                      If you check Item Number 4, enter one of these:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="flex flex-col">
+                        <label className="text-sm mb-1">USCIS A-Number</label>
+                        <div className="border border-black px-1 py-1 text-xs h-6">
+                          {employees?.i9Form?.uscisNumber}
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-sm mb-1">
+                          Form I-94 Admission Number
+                        </label>
+                        <div className="border border-black px-1 py-1 text-xs h-6">
+                          {employees?.i9Form?.admissionNumber}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="flex flex-col">
+                        <label className="text-sm mb-1">
+                          Foreign Passport Number and Country of Issuance
+                        </label>
+                        <div className="border border-black px-1 py-1 text-xs h-6">
+                          {employees?.i9Form?.foreignPassportNumber}
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <label className="text-sm mb-1">
+                          Country of Issuance
+                        </label>
+                        <div className="border border-black px-1 py-1 text-xs h-6"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-black">
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      Signature of Employee
+                    </label>
+                    <div className="border-b-2 border-black  px-1 py-2 text-xs h-8 bg-transparent">
+                      {employees?.signature ? (
+                        <img
+                          src={`${VITE_BASE_URL}/image${employees?.signature}`}
+                          alt="Employee Signature"
+                          className="h-8 w-28 object-contain -mt-3"
+                        />
+                      ) : (
+                        <span className="text-transparent">_</span> // keeps the border height consistent
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      Today's Date (mm/dd/yyyy)
+                    </label>
+                    <div className="border-b-2 border-black px-1 py-2 text-xs h-8 bg-transparent">
+                      {formatedDate(employees?.createdAt)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preparer/Translator Notice */}
+              <div className="bg-gray-100 border border-black p-2 mb-3 text-sm">
+                <p className="font-medium">
+                  If a preparer and/or translator assisted you in completing
+                  Section 1, that person MUST complete the Preparer and/or
+                  Translator Certification on Page 3.
+                </p>
+              </div>
+
+              {/* Section 2 Header */}
+              <div className="bg-gray-300 text-black p-1 mb-5 text-xs font-bold">
+                Section 2. Employer Review and Verification: Employers or their
+                authorized representative must complete and sign Section 2
+                within three business days after the employee's first day of
+                employment, and must physically examine, or examine consistent
+                with an alternative procedure authorized by the Secretary of
+                DHS, documentation from List A OR a combination of documentation
+                from List B and List C. Enter any additional documentation in
+                the Additional Information box; see instructions.
+              </div>
+
+              {/* List A, B, C Table */}
+              <div className="grid grid-cols-3 gap-0 mb-3 border border-black">
+                <div className="border-r border-black">
+                  <div className="bg-gray-200 p-1 text-center font-bold text-sm border-b border-black">
+                    List A
+                  </div>
+                  <div className="p-2 space-y-2">
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Document Title 1:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Issuing Authority:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Document Number (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Expiration Date (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-400">
+                      <label className="text-sm block mb-1">
+                        Document Title 2 (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Issuing Authority:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Document Number (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Expiration Date (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-400">
+                      <label className="text-sm block mb-1">
+                        Document Title 3 (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Issuing Authority:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Document Number (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                    <div>
+                      <label className="text-sm block mb-1">
+                        Expiration Date (if any):
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                  </div>
+                </div>
+                <div className="border-r border-black">
+                  <div className="bg-gray-200 p-1 text-center font-bold text-sm border-b border-black">
+                    List B<br />
+                    <span className="font-normal text-sm">AND</span>
+                  </div>
+                  <div className="p-2">
+                    <div className="mb-2">
+                      <label className="text-sm block mb-1">
+                        Document Title:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <div className="bg-gray-200 p-1 text-center font-bold text-sm border-b border-black">
+                    List C
+                  </div>
+                  <div className="p-2">
+                    <div className="mb-2">
+                      <label className="text-sm block mb-1">
+                        Document Title:
+                      </label>
+                      <div className="border border-gray-400 px-1 py-1 text-sm w-full h-6"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div className="border border-black p-2 mb-3">
+                <label className="text-sm font-semibold block mb-1">
+                  Additional Information
+                </label>
+                <div className="border border-gray-400 px-1 py-1 text-xs w-full h-16"></div>
+                <div className="flex items-start gap-2 mt-2">
+                  <div className="w-3 h-3 border border-black mt-1"></div>
+                  <span className="text-sm">
+                    Check here if you used an alternative procedure authorized
+                    by DHS to examine documents.
+                  </span>
+                </div>
+              </div>
+              {/* certification Text */}
+              <div className="border border-black p-2 mb-3">
+                <p className="text-sm mb-2 font-medium">
+                  Certification: I attest, under penalty of perjury, that (1) I
+                  have examined the documentation presented by the above-named
+                  employee, (2) the above-listed documentation appears to be
+                  genuine and to relate to the employee named, and (3) to the
+                  best of my knowledge, the employee is authorized to work in
+                  the United States.
+                </p>
+              </div>
+              {/* Certification */}
+              <div className="border border-black p-2 mb-3">
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      First Day of Employment (mm/dd/yyyy):
+                    </label>
+                    <div className="border border-black px-1 py-2 text-xs h-7"></div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      Last Name, First Name and Title of Employer or Authorized
+                      Representative
+                    </label>
+                    <div className="border border-black px-1 py-2 text-xs h-7"></div>
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      Signature of Employer or Authorized Representative
+                    </label>
+                    <div className="border-b-2 border-black px-1 py-2 text-xs h-7 bg-transparent"></div>
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-sm mb-1">
+                      Today's Date (mm/dd/yyyy)
+                    </label>
+                    <div className="border border-black px-1 py-2 text-xs h-7"></div>
+                  </div>
+                </div>
+                <div className="border-t border-black pt-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col">
+                      <label className="text-sm mb-6">
+                        Employer's Business or Organization Name
+                      </label>
+                      <div className="border border-black px-1 py-2 text-xs h-7"></div>
+                    </div>
+                    <div className="flex flex-col">
+                      <label className="text-sm mb-1">
+                        Employer's Business or Organization Address, City or
+                        Town, State, ZIP Code
+                      </label>
+                      <div className="border border-black px-1 py-2 text-xs h-7"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1,12 +1,12 @@
 import React, { useRef, useState } from "react";
-import { Dialog } from "@headlessui/react";
+
 import { FileText, ImageIcon, Upload, X, Loader2 } from "lucide-react";
 import { Button } from "antd";
 import { useDispatch } from "react-redux";
-import { uploadCalendarEntry } from "../../../../redux/feature/calendar/calendarSlice";
 import toast from "react-hot-toast";
+import { uploadAdminTimeSheet } from "../../../../redux/feature/adminTimeSheet/adminTimeSheetSlice";
 
-const AdminCalender = () => {
+const AdminTimeSheetUp = () => {
   // upload file states
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -115,11 +115,11 @@ const AdminCalender = () => {
       formData.append("image", uploadedFile.file); // append each file
     });
     // dispatch Redux action
-    const result = await dispatch(uploadCalendarEntry(formData));
-    if (uploadCalendarEntry.fulfilled.match(result)) {
+    const result = await dispatch(uploadAdminTimeSheet(formData));
+    if (uploadAdminTimeSheet.fulfilled.match(result)) {
       setLoading(false);
     }
-    toast.success("calender submitted successfully 🍾");
+    toast.success("Time Sheet submitted successfully 🍾");
     setUploadedFiles("");
   };
 
@@ -271,4 +271,4 @@ const AdminCalender = () => {
   );
 };
 
-export default AdminCalender;
+export default AdminTimeSheetUp;

@@ -107,6 +107,7 @@ const config = {
   },
   future: {
     colorFormat: "hex",
+    disableExperimentalColorSpaces: true,
   },
 };
 
