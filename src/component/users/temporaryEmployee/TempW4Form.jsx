@@ -1,10 +1,18 @@
-import { useForm } from "react-hook-form";
 import ProgressBar from "../../progressBar/ProgressBar";
 import { useState } from "react";
 import { X } from "lucide-react";
+import { Controller, useForm } from "react-hook-form";
 
 const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
   const totalSteps = 12;
+
+  const [children, setChildren] = useState("");
+  const [dependents, setDependents] = useState("");
+
+  // Calculate amounts
+  const childrenAmount = (Number(children) || 0) * 2000;
+  const dependentsAmount = (Number(dependents) || 0) * 500;
+  const totalAmount = childrenAmount + dependentsAmount;
 
   const {
     register,
@@ -12,6 +20,7 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
     trigger,
     getValues,
     setValue,
+    control,
     // watch,
     formState: { errors },
   } = useForm({
@@ -33,11 +42,16 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
         ssn: data.ssn,
         maritalStatus: data.maritalStatus,
         signatureDate: data.signDate,
-        qualifyingChildren: data.qualifyingChildren,
-        amount: data.otherIncome,
-        childrenDepencyNo: data.childTaxCredit,
-        TotalDependencyAmount: data.dependentCredit,
-        extraWithHoldingAmount: data.otherDependents,
+        // Step 3: Dependents
+        childrenNo: Number(data.qualifyingChildren) || 0,
+        childrenDepencyNo: Number(data.otherDependents) || 0,
+        TotalDependencyAmount: totalAmount,
+
+        // Step 4: Other Income
+        withHoldAmount: data.otherIncome,
+        deductedAmount: data.otherIncome2,
+        extraWithHoldingAmount: data.otherIncome3,
+        amount: 0, // No desiredSalary in W4
         acceptedTerms: data.twoJobs || false,
       };
 
@@ -154,23 +168,35 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
             </div>
             <div className="space-y-4 mt-2">
               <div>
-                <label className="text-white mb-2 block">
-                  Social Security Number <span className="text-red-500">*</span>
+                <label className="text-white mb-1 block">
+                  SSN <span className="text-red-500">*</span>
                 </label>
-
                 <div className={inputWrapperClass}>
                   <input
-                    type="number"
-                    placeholder="XXX-XX-XXXX"
+                    type="text"
+                    placeholder="333-22-4444"
                     {...register("ssn", {
-                      required: "Social Security Number is required",
+                      required: "SSN is required",
+                      pattern: {
+                        value: /^\d{3}-\d{2}-\d{4}$/,
+                        message: "Use XXX-XX-XXXX format",
+                      },
                     })}
                     className={inputClass}
+                    maxLength={11}
+                    onChange={(e) => {
+                      let v = e.target.value.replace(/\D/g, "");
+                      if (v.length > 3) v = v.slice(0, 3) + "-" + v.slice(3);
+                      if (v.length > 6)
+                        v = v.slice(0, 6) + "-" + v.slice(6, 10);
+                      e.target.value = v;
+                    }}
                   />
                 </div>
-
                 {errors.ssn && (
-                  <p className="text-red-500 text-sm">{errors.ssn.message}</p>
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.ssn.message}
+                  </p>
                 )}
               </div>
 
@@ -264,26 +290,35 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
             {/* Step 3 Info */}
             <p className="text-[32px] font-bold mt-8">Step 3:</p>
             <div className="border-2 w-32 mb-5"></div>
-            <p>
-              If your total income will be $200,000 or less ($400,000 or less if
-              married filing jointly): Multiply the number of qualifying
-              children under age 17 by $2,000
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-2">
+
+            {/* Qualifying Children */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="text-white mb-2  block">
-                  Number of Qualifying Children{" "}
+                <label className="text-white mb-1 block">
+                  Qualifying Children (under 17){" "}
                   <span className="text-red-500">*</span>
                 </label>
                 <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="Enter number of children"
-                    {...register("qualifyingChildren", {
-                      required: "Number of qualifying children is required",
-                      min: { value: 0, message: "Cannot be negative" },
-                    })}
-                    className={inputClass}
+                  <Controller
+                    name="qualifyingChildren"
+                    control={control}
+                    rules={{
+                      required: "Required",
+                      min: { value: 0, message: "No negative" },
+                    }}
+                    render={({ field }) => (
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={children}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setChildren(val);
+                          field.onChange(val ? Number(val) : "");
+                        }}
+                        className={inputClass}
+                      />
+                    )}
                   />
                 </div>
                 {errors.qualifyingChildren && (
@@ -292,49 +327,37 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
                   </p>
                 )}
               </div>
-
-              <div>
-                <label className="text-white mb-2  block">
-                  Total Child Tax Credit <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="Enter total ($)"
-                    {...register("childTaxCredit", {
-                      required: "Child tax credit amount is required",
-                      min: { value: 0, message: "Cannot be negative" },
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors.childTaxCredit && (
-                  <p className="text-red-500 text-sm">
-                    {errors.childTaxCredit.message}
-                  </p>
-                )}
+              <div className="flex items-end">
+                <p className="bg-gray-800 p-2 rounded w-full text-center">
+                  ${childrenAmount}
+                </p>
               </div>
             </div>
-            <p>
-              If your total income will be $200,000 or less ($400,000 or less if
-              married filing jointly): Multiply the number of other dependents
-              by $500
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-2">
+
+            {/* Other Dependents */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               <div>
-                <label className="text-white mb-2  block">
-                  Number of Other Dependents{" "}
-                  <span className="text-red-500">*</span>
+                <label className="text-white mb-1 block">
+                  Other Dependents
                 </label>
                 <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="Enter number of dependents"
-                    {...register("otherDependents", {
-                      required: "Number of other dependents is required",
-                      min: { value: 0, message: "Cannot be negative" },
-                    })}
-                    className={inputClass}
+                  <Controller
+                    name="otherDependents"
+                    control={control}
+                    rules={{ min: { value: 0, message: "No negative" } }}
+                    render={({ field }) => (
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={dependents}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDependents(val);
+                          field.onChange(val ? Number(val) : "");
+                        }}
+                        className={inputClass}
+                      />
+                    )}
                   />
                 </div>
                 {errors.otherDependents && (
@@ -343,62 +366,57 @@ const TempW4Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
                   </p>
                 )}
               </div>
-
-              <div>
-                <label className="text-white mb-2  block">
-                  Total Dependent Credit <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="Enter total ($)"
-                    {...register("dependentCredit", {
-                      required: "Dependent credit amount is required",
-                      min: { value: 0, message: "Cannot be negative" },
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors.dependentCredit && (
-                  <p className="text-red-500 text-sm">
-                    {errors.dependentCredit.message}
-                  </p>
-                )}
+              <div className="flex items-end">
+                <p className="bg-gray-800 p-2 rounded w-full text-center">
+                  ${dependentsAmount}
+                </p>
               </div>
             </div>
 
-            {/* Step 4 Info */}
+            {/* Total */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="text-white mb-1 block">Total Credit</label>
+                <p className="bg-green-700 p-2 rounded font-semibold text-center">
+                  ${totalAmount}
+                </p>
+              </div>
+            </div>
+
+            {/* Step 4 */}
             <p className="text-[32px] font-bold mt-8">Step 4:</p>
             <div className="border-2 w-32 mb-5"></div>
-            <p>
-              Other income (not from jobs). If you want tax withheld for other
-              income you expect this year that won’t have withholding, enter the
-              amount of other income here. This may include interest, dividends,
-              and retirement income.
+            <p className="mb-4">
+              Other income (interest, dividends, etc.) not from jobs:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 mt-4">
-              <div>
-                <label className="text-white mb-2  block">
-                  Other Income <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="Enter other income ($)"
-                    {...register("otherIncome", {
-                      required: "Other income amount is required",
-                      min: { value: 0, message: "Cannot be negative" },
-                    })}
-                    className={inputClass}
-                  />
+
+            {["otherIncome", "otherIncome2", "otherIncome3"].map((name, i) => (
+              <div
+                key={name}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
+              >
+                <div>
+                  <label className="text-white mb-1 block">
+                    Amount {i + 1}
+                  </label>
+                  <div className={inputWrapperClass}>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      {...register(name, {
+                        min: { value: 0, message: "No negative" },
+                      })}
+                      className={inputClass}
+                    />
+                  </div>
+                  {errors[name] && (
+                    <p className="text-red-500 text-sm">
+                      {errors[name].message}
+                    </p>
+                  )}
                 </div>
-                {errors.otherIncome && (
-                  <p className="text-red-500 text-sm">
-                    {errors.otherIncome.message}
-                  </p>
-                )}
               </div>
-            </div>
+            ))}
 
             {/* Employee Signature and Date */}
             <div className="grid grid-cols-1 sm:grid-cols-2 mb-4">

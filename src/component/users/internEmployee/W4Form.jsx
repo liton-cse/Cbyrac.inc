@@ -39,10 +39,10 @@ const W4Form = ({ prevStep, nextStep, step, preview, setFormData }) => {
       const data = getValues();
 
       // Sum all other income fields
-      const extraWithHoldingAmount =
-        (Number(data.otherIncome) || 0) +
-        (Number(data.otherIncome2) || 0) +
-        (Number(data.otherIncome3) || 0);
+      // const extraWithHoldingAmount =
+      //   (Number(data.otherIncome) || 0) +
+      //   (Number(data.otherIncome2) || 0) +
+      //   (Number(data.otherIncome3) || 0);
 
       setFormData((prev) => ({
         ...prev,
@@ -62,9 +62,10 @@ const W4Form = ({ prevStep, nextStep, step, preview, setFormData }) => {
           TotalDependencyAmount: totalAmount,
 
           // Step 4: Other Income
-          extraWithHoldingAmount,
-          withHoldAmount: 13000,
-          deductedAmount: "13000",
+
+          withHoldAmount: data.otherIncome1,
+          deductedAmount: data.otherIncome2,
+          extraWithHoldingAmount: data.otherIncome3,
           amount: 0, // No desiredSalary in W4
 
           // Signature
