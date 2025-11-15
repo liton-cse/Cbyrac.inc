@@ -1523,8 +1523,8 @@ const InternPdfViewer = () => {
                         <span className="mr-2 font-bold">$</span>
                         <div className="w-32 border-b border-black px-1 font-medium">
                           <p>
-                            {employees?.w4Form.childrenNo} {" / $"}
-                            {Number(employees?.w4Form.childrenNo) * 2000}
+                            {employees?.w4Form?.childrenNo} {" / $"}
+                            {Number(employees?.w4Form?.childrenNo) * 2000}
                           </p>
                         </div>
                       </div>
@@ -1535,8 +1535,8 @@ const InternPdfViewer = () => {
                         <span className="mr-2 font-bold">$</span>
                         <div className="w-32 border-b border-black px-1  font-medium">
                           <p>
-                            {employees?.w4Form.childrenDepencyNo} {" / $"}
-                            {Number(employees?.w4Form.childrenDepencyNo) * 500}
+                            {employees?.w4Form?.childrenDepencyNo} {" / $"}
+                            {Number(employees?.w4Form?.childrenDepencyNo) * 500}
                           </p>
                         </div>
                       </div>
