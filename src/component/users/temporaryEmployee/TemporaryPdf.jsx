@@ -1325,119 +1325,6 @@ const PdfViewer = () => {
                 ) || "\u00A0"}
               </span>
             </div>
-
-            {/* Company Use Only Section */}
-            <div className="border-t-2 border-black pt-4">
-              <h3 className="font-bold bg-gray-300 text-center mb-3">
-                CBYRAC, INC. Use Only
-              </h3>
-
-              <div className="space-y-2 mb-4 font-medium">
-                <div>
-                  <span>
-                    Check One: ☐ New Hire ☐ Re-Hire Status: ☐ Full Time ☐ Part
-                    Time
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="whitespace-nowrap">Job Description:</span>
-                  <span className="border-b border-black inline-block w-60">
-                    {employees?.companyUse?.jobDescription || "\u00A0"}
-                  </span>
-                  <span className="ml-4 whitespace-nowrap">W/C Code:</span>
-                  <span className="border-b border-black inline-block w-28">
-                    {employees?.companyUse?.wcCode || "\u00A0"}
-                  </span>
-                  <span className="ml-4 whitespace-nowrap">Hire Date:</span>
-                  <span className="border-b border-black inline-block w-40">
-                    {employees?.companyUse?.hireDate || "\u00A0"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap">Termination:</span>
-                  <span className="border-b border-black inline-block w-40">
-                    {employees?.companyUse?.termination || "\u00A0"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2 mb-4 font-medium">
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap">
-                    Pay Rate: ☐ Hourly $
-                  </span>
-                  <span className="border-b border-black inline-block w-32">
-                    {employees?.companyUse?.hourlyRate || "\u00A0"}
-                  </span>
-                  <span className="whitespace-nowrap">
-                    per hour ☐ Commission
-                  </span>
-                </div>
-                <div className="ml-16 flex items-center gap-2">
-                  <span className="whitespace-nowrap">
-                    ☐ Salary O.T. Exempt $
-                  </span>
-                  <span className="border-b border-black inline-block w-32">
-                    {employees?.companyUse?.salaryOTExempt || "\u00A0"}
-                  </span>
-                  <span className="whitespace-nowrap">per pay period</span>
-                </div>
-                <div className="ml-16 flex items-center gap-2">
-                  <span className="whitespace-nowrap">
-                    ☐ Salary O.T. Non-Exempt $
-                  </span>
-                  <span className="border-b border-black inline-block w-32">
-                    {employees?.companyUse?.salaryOTNonExempt || "\u00A0"}
-                  </span>
-                  <span className="whitespace-nowrap">per pay period</span>
-                </div>
-              </div>
-
-              <p className=" mb-2 font-medium">
-                *If salary O.T. non-exempt, what is the special breakdown of
-                rates to be included in salary?
-              </p>
-              <div className="font-medium mb-2 flex items-center gap-2 flex-wrap">
-                <span className="whitespace-nowrap">
-                  Regular rate (1st 40 hours) = $
-                </span>
-                <span className="border-b border-black inline-block w-32">
-                  {employees?.companyUse?.regularRate || "\u00A0"}
-                </span>
-                <span className="ml-8 whitespace-nowrap">O.T. Rate = $</span>
-                <span className="border-b border-black inline-block w-32">
-                  {employees?.companyUse?.otRate || "\u00A0"}
-                </span>
-              </div>
-              <div className="mb-4 font-medium flex items-center gap-2">
-                <span className="whitespace-nowrap">
-                  **Work Hours per pay period:
-                </span>
-                <span className="border-b border-black inline-block w-32">
-                  {employees?.companyUse?.workHours || "\u00A0"}
-                </span>
-              </div>
-              <div className="mb-4 font-medium flex items-center gap-2">
-                <span className="whitespace-nowrap">☐ Other:</span>
-                <span className="border-b border-black flex-1 min-w-0">
-                  {employees?.companyUse?.other || "\u00A0"}
-                </span>
-              </div>
-
-              <h3 className="text-center bg-gray-300 font-bold mb-3">
-                Human Resource Use Only
-              </h3>
-              <div className="font-medium flex items-center gap-2 flex-wrap">
-                <span className="whitespace-nowrap">Received By:</span>
-                <span className="border-b border-black inline-block w-64">
-                  {employees?.hrUse?.receivedBy || "\u00A0"}
-                </span>
-                <span className="ml-4 whitespace-nowrap">Date:</span>
-                <span className="border-b border-black inline-block w-40">
-                  {employees?.hrUse?.date || "\u00A0"}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Page 5 - Substance Abuse Policy */}
@@ -3025,8 +2912,8 @@ const PdfViewer = () => {
                         <span className="mr-2 font-bold">$</span>
                         <div className="w-32 border-b border-black px-1 font-medium">
                           <p>
-                            {employees?.w4Form.childrenNo} {" / $"}
-                            {Number(employees?.w4Form.childrenNo) * 2000}
+                            {employees?.w4Form?.childrenNo} {" / $"}
+                            {Number(employees?.w4Form?.childrenNo) * 2000}
                           </p>
                         </div>
                       </div>
@@ -3037,8 +2924,8 @@ const PdfViewer = () => {
                         <span className="mr-2 font-bold">$</span>
                         <div className="w-32 border-b border-black px-1  font-medium">
                           <p>
-                            {employees?.w4Form.childrenDepencyNo} {" / $"}
-                            {Number(employees?.w4Form.childrenDepencyNo) * 500}
+                            {employees?.w4Form?.childrenDepencyNo} {" / $"}
+                            {Number(employees?.w4Form?.childrenDepencyNo) * 500}
                           </p>
                         </div>
                       </div>

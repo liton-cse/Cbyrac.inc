@@ -2,6 +2,7 @@ import { Download, Loader2, Image as ImageIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { getPayrollCalender } from "../../../redux/employeeApi/temporaryApi";
+import { VITE_BASE_URL } from "../../../config";
 
 const TempPayrollCalender = () => {
   const [loadingType, setLoadingType] = useState(null);
@@ -22,7 +23,7 @@ const TempPayrollCalender = () => {
           const fetchedUrl = response.image[0];
           const fullUrl = fetchedUrl.startsWith("http")
             ? fetchedUrl
-            : `${import.meta.env.VITE_BASE_URL}${fetchedUrl}`;
+            : `${VITE_BASE_URL}${fetchedUrl}`;
           setFileUrl(fullUrl);
 
           const ext = fetchedUrl.split(".").pop().toLowerCase();
