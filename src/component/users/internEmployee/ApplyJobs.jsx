@@ -110,7 +110,7 @@ const ApplyJobs = () => {
       }
       dispatch(submitEmployeeForm(fd));
       alert("Data submitted successfully!");
-      navigate("/view-intern-form");
+      navigate("/view-intern-pdf");
       setStep(1);
     } catch (error) {
       console.error("Submission error:", error);
