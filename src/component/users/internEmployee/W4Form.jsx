@@ -364,7 +364,7 @@ const W4Form = ({ prevStep, nextStep, step, preview, setFormData }) => {
             Other income (interest, dividends, etc.) not from jobs:
           </p>
 
-          {["otherIncome", "otherIncome2", "otherIncome3"].map((name, i) => (
+          {["otherIncome1", "otherIncome2", "otherIncome3"].map((name, i) => (
             <div
               key={name}
               className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
