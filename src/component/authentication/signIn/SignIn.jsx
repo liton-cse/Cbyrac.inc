@@ -12,7 +12,7 @@ const SignIn = () => {
     formState: { errors },
   } = useForm();
   const navigate = useNavigate();
-  const { userInfo } = useSelector((state) => state.user);
+  const { userInfo, isLoading } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
@@ -30,8 +30,6 @@ const SignIn = () => {
     delete data.remember;
     dispatch(loginUser(data));
   };
-
-  //   const password = watch("password");
 
   // ✅ Gradient Border Wrapper
   const gradientWrapper =
@@ -139,8 +137,13 @@ const SignIn = () => {
             <button
               type="submit"
               className="px-28 py-3 rounded-md bg-[#8D6851] text-white font-semibold hover:opacity-90"
+              disabled={isLoading}
             >
-              Login
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                "Login"
+              )}
             </button>
           </div>
 

@@ -101,6 +101,7 @@ const InternPdfViewer = () => {
           Download Form
         </button>
       </div>
+
       <div
         ref={targetRef}
         className="min-h-screen bg-gray-50 p-4 print:p-0 print:bg-white"
@@ -1753,6 +1754,7 @@ const InternPdfViewer = () => {
             </div>
           </div>
         </div>
+
         <style>{`
         @media print {
           .page-break {
