@@ -18,8 +18,8 @@ const ApplyJobs = () => {
   const [formData, setFormData] = useState({
     generalInfo: {},
     bankForm: {},
-    i9Form: {},
-    w4Form: {},
+    i9Form: null,
+    w4Form: null,
     citizenShipForm: "",
     signature: null,
     photoId: null,
@@ -28,6 +28,7 @@ const ApplyJobs = () => {
     socialSecurityCard: null,
     workAuthorizationDocument: null,
   });
+
   const totalSteps = 5;
   const {
     register,
@@ -36,6 +37,7 @@ const ApplyJobs = () => {
     getValues,
     trigger,
     setValue,
+    reset,
     // watch,
   } = useForm();
   const nextStepHandler = async () => {
@@ -110,8 +112,10 @@ const ApplyJobs = () => {
       }
       dispatch(submitEmployeeForm(fd));
       alert("Data submitted successfully!");
-      navigate("/view-intern-pdf");
+
       setStep(1);
+      reset();
+      setPreview(null);
     } catch (error) {
       console.error("Submission error:", error);
       alert("An error occurred. Please try again.");

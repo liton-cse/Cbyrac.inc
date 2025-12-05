@@ -92,7 +92,7 @@ const BankAccount = ({ prevStep, step, nextStep, setFormData, preview }) => {
 
     if (validFiles.length > 0) {
       const dataTransfer = new DataTransfer();
-      dataTransfer.items.add(validFiles[0]); // Only take the first valid file
+      dataTransfer.items.add(validFiles[0]);
       setFiles([validFiles[0]]);
       setValue("documents", dataTransfer.files, { shouldValidate: true });
     }
@@ -285,6 +285,7 @@ const BankAccount = ({ prevStep, step, nextStep, setFormData, preview }) => {
                       </p>
                     )}
                   </div>
+
                   <div>
                     <label className="text-white mb-1 block">
                       SSN <span className="text-red-500">*</span>
@@ -319,6 +320,7 @@ const BankAccount = ({ prevStep, step, nextStep, setFormData, preview }) => {
                       </p>
                     )}
                   </div>
+
                   <div>
                     <label className="text-white mb-1 block">
                       Bank Name <span className="text-red-500">*</span>

@@ -8,6 +8,8 @@ import adminFormReducer from "../feature/adminForm/adminFormSlice";
 import calendarReducer from "../feature/calendar/calendarSlice";
 import tempEmployeeReducer from "../feature/tempEmployee/tempEmployeeSlice";
 import internEmployeeReducer from "../feature/Internemployee/internSlice";
+import w4FormReducer from "../feature/adminW4Form/W4FormSlice";
+import i9FormReducer from "../feature/adminI9Form/adminI9FormSlice";
 export const store = configureStore({
   reducer: {
     user: userReducer,
@@ -18,6 +20,8 @@ export const store = configureStore({
     calendar: calendarReducer,
     tempEmployee: tempEmployeeReducer,
     internEmployee: internEmployeeReducer,
+    W4Form: w4FormReducer,
+    I9Form: i9FormReducer,
   },
   devTools: import.meta.env.NODE_ENV !== "production",
 });

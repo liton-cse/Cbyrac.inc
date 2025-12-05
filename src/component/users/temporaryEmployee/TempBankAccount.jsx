@@ -295,18 +295,33 @@ const TempBankAccount = ({
                       </p>
                     )}
                   </div>
+
                   <div>
                     <label className="text-white mb-1 block">
-                      ssn<span className="text-red-500">*</span>
+                      SSN <span className="text-red-500">*</span>
                     </label>
                     <div className={inputWrapperClass}>
                       <input
-                        type="number"
-                        placeholder="XXX-XX---"
+                        type="text"
+                        placeholder="333-22-4444"
                         {...register("ssn", {
-                          required: "SSN code is required",
+                          required: "SSN is required",
+                          pattern: {
+                            value: /^\d{3}-\d{2}-\d{4}$/,
+                            message: "Invalid SSN format. Use XXX-XX-XXXX",
+                          },
                         })}
                         className={inputClass}
+                        maxLength={11}
+                        onChange={(e) => {
+                          let value = e.target.value.replace(/\D/g, "");
+                          if (value.length > 3)
+                            value = value.slice(0, 3) + "-" + value.slice(3);
+                          if (value.length > 6)
+                            value =
+                              value.slice(0, 6) + "-" + value.slice(6, 10);
+                          e.target.value = value;
+                        }}
                       />
                     </div>
                     {errors.ssn && (
@@ -315,6 +330,7 @@ const TempBankAccount = ({
                       </p>
                     )}
                   </div>
+
                   <div>
                     <label className="text-white mb-1 block">
                       Bank Name <span className="text-red-500">*</span>

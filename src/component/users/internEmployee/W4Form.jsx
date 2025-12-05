@@ -1,89 +1,212 @@
-import React, { useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import ProgressBar from "../../progressBar/ProgressBar";
-import { X } from "lucide-react";
+import { Button } from "antd";
+import {
+  Download,
+  Loader2,
+  Printer,
+  Upload,
+  X,
+  Eye,
+  Image as ImageIcon,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Document, Page, pdfjs } from "react-pdf";
+import { internTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchW4Forms } from "../../../redux/feature/adminW4Form/W4FormSlice";
+import { VITE_BASE_URL } from "../../../config";
 
-const W4Form = ({ prevStep, nextStep, step, preview, setFormData }) => {
-  const {
-    register,
-    control,
-    getValues,
-    trigger,
-    formState: { errors },
-  } = useForm({
-    defaultValues: {
-      signDate: new Date().toISOString().split("T")[0],
-      maritalStatus: "",
-      citizenship: false,
-    },
-  });
+// Set PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
+const W4Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   const totalSteps = 5;
 
-  const [children, setChildren] = useState("");
-  const [dependents, setDependents] = useState("");
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
+  const [loadingType, setLoadingType] = useState(null);
+  const [files, setFiles] = useState([]);
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  // Calculate amounts
-  const childrenAmount = (Number(children) || 0) * 2000;
-  const dependentsAmount = (Number(dependents) || 0) * 500;
-  const totalAmount = childrenAmount + dependentsAmount;
+  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
 
+  const { forms } = useSelector((state) => state.W4Form);
+  const [selectedPDF, setSelectedPDF] = useState(null);
+  const {
+    trigger,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm();
+  const dispatch = useDispatch();
+  /* --------------------------------------------------------------- */
+  /*                     FILE VALIDATION & PREVIEW                  */
+  /* --------------------------------------------------------------- */
+  useEffect(() => {
+    const loadData = async () => {
+      await dispatch(fetchW4Forms());
+    };
+
+    loadData();
+  }, []);
+
+  const getFileType = (file) => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type === "application/pdf") return "pdf";
+    return "other";
+  };
+
+  const validateFile = (file) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Invalid file type. Allowed: JPG, PNG, PDF");
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File size exceeds 10 MB limit");
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
+  const createPreview = (file, type) => {
+    return new Promise((resolve) => {
+      if (type === "image") {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        resolve("");
+      }
+    });
+  };
+
+  const handleFiles = async (files) => {
+    if (!files) return;
+
+    const newFiles = [];
+
+    for (const file of Array.from(files)) {
+      if (validateFile(file)) {
+        const type = getFileType(file);
+        const preview = type === "image" ? await createPreview(file, type) : "";
+
+        newFiles.push({ file, preview, type });
+      }
+    }
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     DRAG & DROP HANDLERS                        */
+  /* --------------------------------------------------------------- */
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = () => setIsDragging(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const handleRemoveFile = () => {
+    setFiles([]);
+    setValue("documents", null, { shouldValidate: true });
+  };
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const validFiles = selectedFiles.filter((file) =>
+      ["image/jpeg", "image/png", "application/pdf"].includes(file.type)
+    );
+
+    if (validFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(validFiles[0]);
+      setFiles([validFiles[0]]);
+      setValue("documents", dataTransfer.files, { shouldValidate: true });
+    }
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     DOWNLOAD & PRINT HANDLERS                    */
+  /* --------------------------------------------------------------- */
+
+  const handleDownload = async () => {
+    setLoadingType("download");
+
+    try {
+      const response = await fetch(`${VITE_BASE_URL}/${forms?.image?.[0]}`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Timesheet.pdf"; // file name
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Failed to download the PDF file!");
+    } finally {
+      setLoadingType(null);
+    }
+  };
+
+  const handlePrint = async () => {
+    setLoadingType("print");
+    const win = window.open(pdfUrl, "_blank");
+    if (win) {
+      win.onload = () => win.print();
+    } else {
+      alert("Please allow pop-ups to print the timesheet.");
+    }
+    await new Promise((r) => setTimeout(r, 800));
+    setLoadingType(null);
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     FORM SUBMIT                                 */
+  /* --------------------------------------------------------------- */
+
+  const handleNext = async () => {
+    const result = await trigger();
+
+    if (!result) return; // stop if validation failed
+
+    const allData = getValues();
+
+    setFormData((prev) => ({
+      ...prev,
+      w4Form: allData.documents?.[0],
+    }));
+
+    nextStep();
+    setUploadedFiles([]);
+  };
+  /* --------------------------------------------------------------- */
+  /*                     UI STYLES                                   */
+  /* --------------------------------------------------------------- */
   const inputWrapperClass =
     "rounded-md bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] mt-1 p-[1px]";
   const inputClass =
     "w-full bg-slate-900 text-white rounded-md py-2 px-3 focus:outline-none focus:ring-0";
 
-  const handleNext = async () => {
-    const result = await trigger();
-    if (result) {
-      const data = getValues();
-
-      // Sum all other income fields
-      // const extraWithHoldingAmount =
-      //   (Number(data.otherIncome) || 0) +
-      //   (Number(data.otherIncome2) || 0) +
-      //   (Number(data.otherIncome3) || 0);
-
-      setFormData((prev) => ({
-        ...prev,
-        w4Form: {
-          firstName: data.firstName || "",
-          middleName: data.middleName || "",
-          lastName: data.lastName || "",
-          ssn: data.ssn || "",
-          address: data.address || "",
-          maritalStatus: data.maritalStatus || "",
-          acceptedTerms: data.citizenship || false,
-
-          // Step 3: Dependents
-          childrenNo: Number(data.qualifyingChildren) || 0,
-          childrenDepencyNo: Number(data.otherDependents) || 0,
-          eachDepencyAmount: 500,
-          TotalDependencyAmount: totalAmount,
-
-          // Step 4: Other Income
-
-          withHoldAmount: data.otherIncome1,
-          deductedAmount: data.otherIncome2,
-          extraWithHoldingAmount: data.otherIncome3,
-          amount: 0, // No desiredSalary in W4
-
-          // Signature
-          signatureDate: data.signDate || "",
-        },
-      }));
-
-      nextStep();
-    } else {
-      console.log("Validation errors:", errors);
-    }
-  };
-
   return (
-    <div className="text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="text-white min-h-screen bg-slate-950">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="flex justify-between mb-4">
+        <div className="flex justify-between items-start mb-6">
           <div className="text-sm">
             <div className="font-bold text-lg mb-2">CBYRAC, INC</div>
             <div>123 MAIN STREET SUITE 100</div>
@@ -91,357 +214,209 @@ const W4Form = ({ prevStep, nextStep, step, preview, setFormData }) => {
             <div>PHONE: 555-555-5555</div>
             <div>EMAIL: info@cbyrac.com</div>
           </div>
-          <div className="w-24 h-24 bg-white rounded flex items-center justify-center">
-            <img src="/cbyrac-logo.png" alt="Logo" />
+          <div className="w-24 h-24 bg-white rounded flex items-center justify-center overflow-hidden">
+            <img src="/cbyrac-logo.png" alt="Logo" className="object-contain" />
           </div>
         </div>
 
         {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">
-            Employee Withholding Certificate (Form W-4)
-          </h1>
-          <p className="text-sm text-gray-300 mb-7">
-            Your Withholding is subject to review by the IRS
+          {data ? (
+            <h1 className="text-2xl font-bold mb-2">
+              Employee W4 Form (For {data} Employee)
+            </h1>
+          ) : (
+            <h1 className="text-2xl font-bold mb-2">
+              Employee W4 Form (For Intern Employee)
+            </h1>
+          )}
+          <p className="text-lg text-gray-200">
+            Submit W4 Form carefully for validation
           </p>
-          <ProgressBar currentStep={step} totalSteps={totalSteps} />
         </div>
 
-        <form className="rounded-2xl max-w-7xl mx-auto">
-          {/* Step 1 */}
-          <p className="text-[32px] font-bold mt-8">Step 1:</p>
-          <div className="border-2 w-32 mb-5"></div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="text-white mb-1 block">
-                First Name <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter First Name"
-                  {...register("firstName", {
-                    required: "First Name is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.firstName && (
-                <p className="text-red-500 text-sm">
-                  {errors.firstName.message}
-                </p>
+        {/* Form */}
+        <form className="space-y-6">
+          {/* Download / Print Buttons */}
+          <div className="flex justify-center gap-6 my-10">
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={loadingType === "download"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
+            >
+              {loadingType === "download" ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : (
+                <Download className="w-5 h-5" />
               )}
-            </div>
+              {loadingType === "download" ? "Downloading…" : "Download W4 form"}
+            </button>
 
-            <div>
-              <label className="text-white mb-1 block">Middle Name</label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter Middle Name"
-                  {...register("middleName")}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-white mb-1 block">
-                Last Name <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter Last Name"
-                  {...register("lastName", {
-                    required: "Last Name is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.lastName && (
-                <p className="text-red-500 text-sm">
-                  {errors.lastName.message}
-                </p>
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={loadingType === "print"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
+            >
+              {loadingType === "print" ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : (
+                <Printer className="w-5 h-5" />
               )}
-            </div>
+              {loadingType === "print" ? "Downloading" : "Example W4 form"}
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="text-white mb-1 block">
-                SSN <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="333-22-4444"
-                  {...register("ssn", {
-                    required: "SSN is required",
-                    pattern: {
-                      value: /^\d{3}-\d{2}-\d{4}$/,
-                      message: "Use XXX-XX-XXXX format",
-                    },
-                  })}
-                  className={inputClass}
-                  maxLength={11}
-                  onChange={(e) => {
-                    let v = e.target.value.replace(/\D/g, "");
-                    if (v.length > 3) v = v.slice(0, 3) + "-" + v.slice(3);
-                    if (v.length > 6) v = v.slice(0, 6) + "-" + v.slice(6, 10);
-                    e.target.value = v;
-                  }}
-                />
-              </div>
-              {errors.ssn && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.ssn.message}
+          {/* ------------------- FILE UPLOAD AREA ------------------- */}
+          <div className="mt-12">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-3 border-dashed rounded-lg p-12 text-center transition-colors ${
+                isDragging
+                  ? "border-amber-600 bg-amber-500/5"
+                  : "border-amber-500/40"
+              }`}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center">
+                  <Upload className="w-10 h-10 text-amber-600" />
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-semibold text-white mb-2">
+                    Upload Documents
+                  </h2>
+                  <p className="text-gray-400 mb-6">
+                    Drag & drop files here, or click to browse
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="!bg-[#946344] hover:bg-amber-700 !text-white !px-9 !py-5 rounded-lg font-semibold"
+                >
+                  Choose File
+                </Button>
+
+                <p className="text-sm text-gray-400">
+                  Supports JPG, PNG, PDF – max 10 MB
                 </p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-white mb-1 block">
-                Address <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="City, State, ZIP"
-                  {...register("address", {
-                    required: "Address is required",
-                  })}
-                  className={inputClass}
-                />
               </div>
-              {errors.address && (
-                <p className="text-red-500 text-sm">{errors.address.message}</p>
-              )}
-            </div>
-          </div>
 
-          <div className="mb-6">
-            <label className="text-white mb-1 block">
-              Marital Status <span className="text-red-500">*</span>
-            </label>
-            <div className={inputWrapperClass}>
-              <select
-                {...register("maritalStatus", {
-                  required: "Marital status is required",
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+
+            {/* Global upload error */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Uploaded files preview */}
+            {/* File Preview Section */}
+            {files.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {files.map((file, index) => {
+                  const fileURL = URL.createObjectURL(file);
+                  const isImage = file.type.startsWith("image/");
+                  const isPDF = file.type === "application/pdf";
+
+                  return (
+                    <div
+                      key={index}
+                      className="relative border rounded-md p-2 bg-white shadow-md"
+                    >
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+
+                      {isImage && (
+                        <img
+                          src={fileURL}
+                          alt={file.name}
+                          className="w-full h-32 object-contain rounded-md"
+                        />
+                      )}
+
+                      {isPDF && (
+                        <div
+                          className="w-full h-32 border rounded-md relative cursor-pointer hover:bg-gray-50"
+                          onClick={() => setSelectedPDF(fileURL)}
+                        >
+                          <iframe
+                            src={fileURL}
+                            title={file.name}
+                            className="w-full h-full transform scale-90 origin-top-left pointer-events-none"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                            <p className="text-black text-xl font-semibold flex items-center gap-3 bg-gray-300 p-3 rounded-md">
+                              <Eye size={22} /> View PDF
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs mt-2 truncate">{file.name}</p>
+                    </div>
+                  );
                 })}
-                className={`${inputClass} bg-[#05051A]`}
-              >
-                <option value="">Select</option>
-                <option value="single">Single</option>
-                <option value="married">Married</option>
-                <option value="marriedSeparate">
-                  Married Filing Separately
-                </option>
-              </select>
-            </div>
-            {errors.maritalStatus && (
-              <p className="text-red-500 text-sm">
-                {errors.maritalStatus.message}
-              </p>
+              </div>
             )}
           </div>
 
-          {/* Step 2 */}
-          <p className="text-[32px] font-bold mt-8">Step 2:</p>
-          <div className="border-2 w-32 mb-5"></div>
-          <p className="text-lg mb-4">
-            Complete this step if you hold more than one job or are married
-            filing jointly and your spouse works.
-          </p>
-          <label className="flex items-center gap-2 mb-6">
-            <input
-              type="checkbox"
-              {...register("citizenship")}
-              className="w-5 h-5"
-            />
-            <span>I agree with the conditions above</span>
-          </label>
-
-          {/* Step 3 */}
-          <p className="text-[32px] font-bold mt-8">Step 3:</p>
-          <div className="border-2 w-32 mb-5"></div>
-
-          {/* Qualifying Children */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="text-white mb-1 block">
-                Qualifying Children (under 17){" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <Controller
-                  name="qualifyingChildren"
-                  control={control}
-                  rules={{
-                    required: "Required",
-                    min: { value: 0, message: "No negative" },
-                  }}
-                  render={({ field }) => (
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={children}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setChildren(val);
-                        field.onChange(val ? Number(val) : "");
-                      }}
-                      className={inputClass}
-                    />
-                  )}
-                />
-              </div>
-              {errors.qualifyingChildren && (
-                <p className="text-red-500 text-sm">
-                  {errors.qualifyingChildren.message}
-                </p>
-              )}
-            </div>
-            <div className="flex items-end">
-              <p className="bg-gray-800 p-2 rounded w-full text-center">
-                ${childrenAmount}
-              </p>
-            </div>
-          </div>
-
-          {/* Other Dependents */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="text-white mb-1 block">Other Dependents</label>
-              <div className={inputWrapperClass}>
-                <Controller
-                  name="otherDependents"
-                  control={control}
-                  rules={{ min: { value: 0, message: "No negative" } }}
-                  render={({ field }) => (
-                    <input
-                      type="number"
-                      placeholder="0"
-                      value={dependents}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setDependents(val);
-                        field.onChange(val ? Number(val) : "");
-                      }}
-                      className={inputClass}
-                    />
-                  )}
-                />
-              </div>
-              {errors.otherDependents && (
-                <p className="text-red-500 text-sm">
-                  {errors.otherDependents.message}
-                </p>
-              )}
-            </div>
-            <div className="flex items-end">
-              <p className="bg-gray-800 p-2 rounded w-full text-center">
-                ${dependentsAmount}
-              </p>
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="text-white mb-1 block">Total Credit</label>
-              <p className="bg-green-700 p-2 rounded font-semibold text-center">
-                ${totalAmount}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 4 */}
-          <p className="text-[32px] font-bold mt-8">Step 4:</p>
-          <div className="border-2 w-32 mb-5"></div>
-          <p className="mb-4">
-            Other income (interest, dividends, etc.) not from jobs:
-          </p>
-
-          {["otherIncome1", "otherIncome2", "otherIncome3"].map((name, i) => (
-            <div
-              key={name}
-              className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"
-            >
-              <div>
-                <label className="text-white mb-1 block">Amount {i + 1}</label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    {...register(name, {
-                      min: { value: 0, message: "No negative" },
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors[name] && (
-                  <p className="text-red-500 text-sm">{errors[name].message}</p>
-                )}
+          {/* PDF Full View Modal */}
+          {selectedPDF && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white w-11/12 h-5/6 rounded-lg shadow-lg relative">
+                <button
+                  onClick={() => setSelectedPDF(null)}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                >
+                  <X size={18} />
+                </button>
+                <iframe
+                  src={selectedPDF}
+                  title="Full PDF"
+                  className="w-full h-full rounded-lg"
+                ></iframe>
               </div>
             </div>
-          ))}
+          )}
 
-          {/* Signature & Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-8 mb-6">
-            <div>
-              <label className="block mb-2">
-                Employee Signature <span className="text-red-500">*</span>
-              </label>
-              {preview ? (
-                <div className="relative inline-block">
-                  <img
-                    src={preview}
-                    alt="Signature"
-                    className="w-[200px] h-[80px] object-contain border rounded-md"
-                  />
-                </div>
-              ) : (
-                <p className="text-gray-400">Signature will appear here</p>
-              )}
+          {/* ------------------- SUBMIT ------------------- */}
+          <div className="flex justify-center mt-12">
+            {/* Navigation */}
+            <div className="flex justify-center mt-10 gap-4">
+              <button
+                type="button"
+                onClick={prevStep}
+                className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
+              >
+                Next
+              </button>
             </div>
-
-            <div>
-              <label className="mb-1 block">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="date"
-                  {...register("signDate", { required: "Date is required" })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.signDate && (
-                <p className="text-red-500 text-sm">
-                  {errors.signDate.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex justify-center mt-10 gap-4">
-            <button
-              type="button"
-              onClick={prevStep}
-              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            >
-              Previous
-            </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
-            >
-              Next
-            </button>
           </div>
         </form>
       </div>

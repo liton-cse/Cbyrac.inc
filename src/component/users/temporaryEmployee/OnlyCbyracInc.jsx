@@ -12,7 +12,7 @@ const OnlyCbyracInc = ({
   errors,
   onSubmit,
 }) => {
-  const totalSteps = 8; // total number of steps for progress bar
+  const totalSteps = 8;
 
   //   const {
   //     register,

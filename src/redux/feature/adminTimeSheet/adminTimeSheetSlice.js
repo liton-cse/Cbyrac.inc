@@ -20,7 +20,7 @@ export const uploadAdminTimeSheet = createAsyncThunk(
 const adminTimeSheetSlice = createSlice({
   name: "adminTimeSheet",
   initialState: {
-    entries: [], // all uploaded calendar entries
+    entries: [],
     loading: false,
     error: null,
   },

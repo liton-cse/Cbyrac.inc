@@ -1,6 +1,14 @@
 import React, { useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Clock, Calendar, Briefcase, LogOut, TimerIcon } from "lucide-react";
+import {
+  Clock,
+  Calendar,
+  Briefcase,
+  LogOut,
+  TimerIcon,
+  FormInputIcon,
+  FormInput,
+} from "lucide-react";
 import { Button } from "../../ui/Button";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../../redux/feature/user/userSlice";
@@ -36,6 +44,18 @@ const AdminSidebar = () => {
       label: "Calendar",
       icon: <Calendar className="w-5 h-5" />,
       path: "/admin/admin-calender",
+    },
+    {
+      key: "I9 form",
+      label: "I9 form",
+      icon: <FormInput className="w-5 h-5" />,
+      path: "/admin/i9-form",
+    },
+    {
+      key: "W4 form",
+      label: "W4 form",
+      icon: <FormInputIcon className="w-5 h-5" />,
+      path: "/admin/w4-form",
     },
 
     {

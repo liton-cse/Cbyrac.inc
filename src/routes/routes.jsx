@@ -27,6 +27,8 @@ import TempPayrollCalender from "../component/users/temporaryEmployee/TempPayrol
 import PdfViewer from "../component/users/temporaryEmployee/TemporaryPdf";
 import InternPdfViewer from "../component/users/internEmployee/InternPdf";
 import AdminTimeSheetUp from "../component/users/admin/adminTimeSheetUp/AdminTimeSheetUp";
+import AdminI9Form from "../component/users/admin/adminI9Form/AdminI9Form";
+import Adminw4Form from "../component/users/admin/adminW4Form/AdminW4Form";
 
 const router = createBrowserRouter([
   // Public routes
@@ -115,6 +117,8 @@ const router = createBrowserRouter([
           { path: "request-list", element: <RequestList /> },
           { path: "admin-calender", element: <AdminCalender /> },
           { path: "time-sheet-form", element: <AdminTimeSheetUp /> },
+          { path: "i9-form", element: <AdminI9Form /> },
+          { path: "w4-form", element: <Adminw4Form /> },
         ],
       },
     ],

@@ -12,8 +12,8 @@ import CertificationText from "./CertificationText";
 import InjuriesProcedures from "./InjuriesProcedures";
 import AllPolicy from "./AllPolicy";
 import TempBankAccount from "./TempBankAccount";
-import TempI9Form from "./TempI9Form";
-import TempW4Form from "./TempW4Form";
+import I9Form from "../internEmployee/I9Form";
+import W4Form from "../internEmployee/W4Form";
 import TempSelectCitizenShip from "./TempSelectCitizenShip";
 import { X, XIcon } from "lucide-react";
 import { useDispatch } from "react-redux";
@@ -35,8 +35,8 @@ const TempApplyJob = () => {
     accidentProcedure: {},
     submittalPolicy: {},
     bankForm: {},
-    i9Form: {},
-    w4Form: {},
+    i9Form: null,
+    w4Form: null,
     citizenShipForm: "",
     signature: null,
     photoId: null,
@@ -56,6 +56,7 @@ const TempApplyJob = () => {
     handleSubmit,
     formState: { errors },
     getValues,
+    reset,
     trigger, // <-- important for step-wise validation
   } = useForm();
 
@@ -174,7 +175,9 @@ const TempApplyJob = () => {
         console.log(`${key}:`, value instanceof File ? value.name : value);
       }
       dispatch(addEmployee(fd));
-      navigate("/view-pdf");
+      alert("Temprart Data Submit Successfully !");
+      setPreview(null);
+      reset();
       setStep(1);
     } catch (error) {
       console.error("❌ Error submitting form:", error);
@@ -303,9 +306,24 @@ const TempApplyJob = () => {
                   <div className={inputWrapperClass}>
                     <input
                       type="text"
-                      placeholder="Enter SSN"
-                      {...register("ssn", { required: "SSN is required" })}
+                      placeholder="333-22-4444"
+                      {...register("ssn", {
+                        required: "SSN is required",
+                        pattern: {
+                          value: /^\d{3}-\d{2}-\d{4}$/,
+                          message: "Invalid SSN format. Use XXX-XX-XXXX",
+                        },
+                      })}
                       className={inputClass}
+                      maxLength={11}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/\D/g, "");
+                        if (value.length > 3)
+                          value = value.slice(0, 3) + "-" + value.slice(3);
+                        if (value.length > 6)
+                          value = value.slice(0, 6) + "-" + value.slice(6, 10);
+                        e.target.value = value;
+                      }}
                     />
                   </div>
                   {errors.ssn && (
@@ -1047,7 +1065,8 @@ const TempApplyJob = () => {
         />
       )}
       {step === 10 && (
-        <TempI9Form
+        <I9Form
+          data="Temporary"
           register={register}
           errors={errors}
           prevStep={prevStep}
@@ -1060,7 +1079,8 @@ const TempApplyJob = () => {
         />
       )}
       {step === 11 && (
-        <TempW4Form
+        <W4Form
+          data="Temporary"
           register={register}
           errors={errors}
           prevStep={prevStep}

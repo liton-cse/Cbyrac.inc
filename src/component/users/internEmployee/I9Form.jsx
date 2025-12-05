@@ -1,97 +1,214 @@
-import React, { useState } from "react";
-import { useForm } from "react-hook-form";
-import ProgressBar from "../../progressBar/ProgressBar";
-import { X } from "lucide-react";
-export const I9Status = {
-  Citizen: "US Citizen",
-  NonCitizen: "Noncitizen National",
-  Permanent: "Lawful Permanent Resident",
-  NonCitizen_Other: "Other Noncitizen",
-};
+import { Button } from "antd";
+import {
+  Download,
+  Loader2,
+  Printer,
+  Upload,
+  X,
+  Eye,
+  Image as ImageIcon,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { Document, Page, pdfjs } from "react-pdf";
+import { internTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchI9Forms } from "../../../redux/feature/adminI9Form/adminI9FormSlice";
+import { VITE_BASE_URL } from "../../../config";
 
-const I9Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
+// Set PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+const I9Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   const totalSteps = 5;
 
-  const {
-    register,
-    watch,
-    formState: { errors },
-    handleSubmit,
-    setValue,
-    reset,
-  } = useForm({
-    defaultValues: {
-      lastName: "",
-      firstName: "",
-      middleInitial: "",
-      otherLastName: "",
-      address: "",
-      dob: "",
-      ssn: "",
-      employeeEmail: "",
-      employeePhone: "",
-      citizenship: "",
-      uscisNumber: "",
-      otherUscis: "",
-      i94Number: "",
-      passportNumber: "",
-      signDate: new Date().toISOString().split("T")[0],
-    },
-  });
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef(null);
+  const [loadingType, setLoadingType] = useState(null);
+  const [files, setFiles] = useState([]);
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  // Form submission handler
-  const onSubmit = (data) => {
-    console.log("form", data);
-    const formData = {
-      // 🟢 Common fields
-      lastName: data.lastName,
-      firstName: data.firstName,
-      middleName: data.middleInitial,
-      otherNames: data.otherLastName,
-      address: data.address,
-      dateOfBirth: data.dob,
-      ssn: data.ssn,
-      email: data.employeeEmail,
-      phone: data.employeePhone,
-      signatureDate: data.signDate,
-      status: data.citizenship,
+  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
+  const dispatch = useDispatch();
+  const {
+    trigger,
+    setValue,
+    getValues,
+    formState: { errors },
+  } = useForm();
+
+  const { forms } = useSelector((state) => state.I9Form);
+  console.log("pdf", forms?.image?.[0]);
+  const [selectedPDF, setSelectedPDF] = useState(null);
+  /* --------------------------------------------------------------- */
+  /*                     FILE VALIDATION & PREVIEW                  */
+  /* --------------------------------------------------------------- */
+
+  useEffect(() => {
+    const loadData = async () => {
+      await dispatch(fetchI9Forms());
     };
 
-    // 🟣 Conditionally add extra fields
-    if (
-      data.citizenship === "Lawful Permanent Resident" ||
-      data.citizenship === I9Status.Permanent
-    ) {
-      formData.uscisNumber = data.uscisNumber;
-    }
+    loadData();
+  }, []);
 
-    if (
-      data.citizenship === "Other Noncitizen" ||
-      data.citizenship === I9Status.NonCitizen_Other
-    ) {
-      formData.uscisNumber = data.otherUscis;
-      formData.admissionNumber = data.i94Number;
-      formData.foreignPassportNumber = data.passportNumber;
-    }
-    setFormData((prev) => ({
-      ...prev,
-      i9Form: formData,
-    }));
-    nextStep();
+  const getFileType = (file) => {
+    if (file.type.startsWith("image/")) return "image";
+    if (file.type === "application/pdf") return "pdf";
+    return "other";
   };
 
+  const validateFile = (file) => {
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Invalid file type. Allowed: JPG, PNG, PDF");
+      return false;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File size exceeds 10 MB limit");
+      return false;
+    }
+    setError("");
+    return true;
+  };
+
+  const createPreview = (file, type) => {
+    return new Promise((resolve) => {
+      if (type === "image") {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        resolve("");
+      }
+    });
+  };
+
+  const handleFiles = async (files) => {
+    if (!files) return;
+
+    const newFiles = [];
+
+    for (const file of Array.from(files)) {
+      if (validateFile(file)) {
+        const type = getFileType(file);
+        const preview = type === "image" ? await createPreview(file, type) : "";
+
+        newFiles.push({ file, preview, type });
+      }
+    }
+
+    setUploadedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     DRAG & DROP HANDLERS                        */
+  /* --------------------------------------------------------------- */
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = () => setIsDragging(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+  const handleRemoveFile = () => {
+    setFiles([]);
+    setValue("documents", null, { shouldValidate: true });
+  };
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    const validFiles = selectedFiles.filter((file) =>
+      ["image/jpeg", "image/png", "application/pdf"].includes(file.type)
+    );
+
+    if (validFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(validFiles[0]);
+      setFiles([validFiles[0]]);
+      setValue("documents", dataTransfer.files, { shouldValidate: true });
+    }
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     DOWNLOAD & PRINT HANDLERS                    */
+  /* --------------------------------------------------------------- */
+
+  const handleDownload = async () => {
+    setLoadingType("download");
+
+    try {
+      const response = await fetch(`${VITE_BASE_URL}/${forms?.image?.[0]}`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Timesheet.pdf"; // file name
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Failed to download the PDF file!");
+    } finally {
+      setLoadingType(null);
+    }
+  };
+
+  const handlePrint = async () => {
+    setLoadingType("print");
+    const win = window.open(pdfUrl, "_blank");
+    if (win) {
+      win.onload = () => win.print();
+    } else {
+      alert("Please allow pop-ups to print the timesheet.");
+    }
+    await new Promise((r) => setTimeout(r, 800));
+    setLoadingType(null);
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     FORM SUBMIT                                 */
+  /* --------------------------------------------------------------- */
+
+  const handleNext = async () => {
+    const result = await trigger();
+
+    if (!result) return; // stop if validation failed
+
+    const allData = getValues();
+
+    setFormData((prev) => ({
+      ...prev,
+      i9Form: allData.documents?.[0],
+    }));
+
+    nextStep();
+    setUploadedFiles([]);
+  };
+
+  /* --------------------------------------------------------------- */
+  /*                     UI STYLES                                   */
+  /* --------------------------------------------------------------- */
   const inputWrapperClass =
     "rounded-md bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] mt-1 p-[1px]";
   const inputClass =
     "w-full bg-slate-900 text-white rounded-md py-2 px-3 focus:outline-none focus:ring-0";
 
-  const citizenship = watch("citizenship", "");
-
   return (
-    <div className="text-white">
-      <div className="max-w-7xl mx-auto">
+    <div className="text-white min-h-screen bg-slate-950">
+      <div className="max-w-7xl mx-auto p-6">
         {/* Header */}
-        <div className="flex space-x-96 mb-4">
+        <div className="flex justify-between items-start mb-6">
           <div className="text-sm">
             <div className="font-bold text-lg mb-2">CBYRAC, INC</div>
             <div>123 MAIN STREET SUITE 100</div>
@@ -99,424 +216,209 @@ const I9Form = ({ prevStep, nextStep, step, setFormData, preview }) => {
             <div>PHONE: 555-555-5555</div>
             <div>EMAIL: info@cbyrac.com</div>
           </div>
-          <div className="w-24 h-24 bg-white rounded flex items-center justify-center">
-            <img src="/cbyrac-logo.png" alt="Company Logo" />
+          <div className="w-24 h-24 bg-white rounded flex items-center justify-center overflow-hidden">
+            <img src="/cbyrac-logo.png" alt="Logo" className="object-contain" />
           </div>
         </div>
 
         {/* Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold mb-2">
-            Employment Eligibility Verification (Form I-9)
-          </h1>
-          <p className="text-sm text-gray-300 mb-7">
-            U.S. Citizenship and Immigration Services
+          {data ? (
+            <h1 className="text-2xl font-bold mb-2">
+              Employee I9 Form (For {data} Employee)
+            </h1>
+          ) : (
+            <h1 className="text-2xl font-bold mb-2">
+              Employee I9 Form (For Intern Employee)
+            </h1>
+          )}
+          <p className="text-lg text-gray-200">
+            Submit I9 Form carefully for validation
           </p>
-          <ProgressBar currentStep={step} totalSteps={totalSteps} />
         </div>
 
         {/* Form */}
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="rounded-2xl max-w-7xl mx-auto"
-        >
-          {/* General Information */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-            <div>
-              <label className="mb-1 block text-white">
-                Last Name (Family Name) <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter Last Name"
-                  {...register("lastName", {
-                    required: "Last name is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.lastName && (
-                <p className="text-red-500 text-sm">
-                  {errors.lastName.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-white">
-                First Name (Given Name) <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter First Name"
-                  {...register("firstName", {
-                    required: "First name is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.firstName && (
-                <p className="text-red-500 text-sm">
-                  {errors.firstName.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
-            <div>
-              <label className="mb-1 block text-white">
-                Middle Initial (if any) <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter Middle Initial"
-                  {...register("middleInitial", {
-                    required: "Middle initial is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.middleInitial && (
-                <p className="text-red-500 text-sm">
-                  {errors.middleInitial.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-white">
-                Other Last Names Used (if any){" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter Other Last Name"
-                  {...register("otherLastName", {
-                    required: "Other last name is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.otherLastName && (
-                <p className="text-red-500 text-sm">
-                  {errors.otherLastName.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <label className="mb-1 block text-white">
-              Address <span className="text-red-500">*</span>
-            </label>
-            <div className={inputWrapperClass}>
-              <input
-                type="text"
-                placeholder="Street, City, State, ZIP"
-                {...register("address", { required: "Address is required" })}
-                className={inputClass}
-              />
-            </div>
-            {errors.address && (
-              <p className="text-red-500 text-sm">{errors.address.message}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="mb-1 block text-white">
-                Date of Birth <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="date"
-                  {...register("dob", {
-                    required: "Date of Birth is required",
-                  })}
-                  className={`${inputClass} py-3.5`}
-                />
-              </div>
-              {errors.dob && (
-                <p className="text-red-500 text-sm">{errors.dob.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-white">
-                U.S. Social Security Number{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter SSN"
-                  {...register("ssn", { required: "SSN is required" })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.ssn && (
-                <p className="text-red-500 text-sm">{errors.ssn.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="mb-1 block text-white">
-                Employee’s Email Address <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="email"
-                  placeholder="Enter Email"
-                  {...register("employeeEmail", {
-                    required: "Email is required",
-                    pattern: {
-                      value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-                      message: "Invalid email address",
-                    },
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.employeeEmail && (
-                <p className="text-red-500 text-sm">
-                  {errors.employeeEmail.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="mb-1 block text-white">
-                Employee’s Telephone Number{" "}
-                <span className="text-red-500">*</span>
-              </label>
-
-              <div className={inputWrapperClass}>
-                <input
-                  type="tel"
-                  placeholder="Enter Phone"
-                  {...register("employeePhone", {
-                    required: "Phone number is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-
-              {errors.employeePhone && (
-                <p className="text-red-500 text-sm">
-                  {errors.employeePhone.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-5 mt-8 space-y-3">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="US Citizen"
-                {...register("citizenship", {
-                  required: "You must select at least one option",
-                })}
-                className="w-5 h-5"
-              />
-              A citizen of the United States
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="Noncitizen National"
-                {...register("citizenship")}
-                className="w-5 h-5"
-              />
-              A noncitizen national of the United States
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="Lawful Permanent Resident"
-                {...register("citizenship")}
-                className="w-5 h-5"
-              />
-              A lawful permanent resident (Enter USCIS or A-Number)
-            </label>
-
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                value="Other Noncitizen"
-                {...register("citizenship")}
-                className="w-5 h-5"
-              />
-              A noncitizen (Other than Item Numbers 2 and 3 above)
-            </label>
-
-            {errors.citizenship && (
-              <p className="text-red-500 text-sm">
-                {errors.citizenship.message}
-              </p>
-            )}
-          </div>
-
-          {citizenship === "Lawful Permanent Resident" && (
-            <div className="w-1/2 mb-4">
-              <label className="mb-1 block text-white">
-                USCIS A-Number <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="text"
-                  placeholder="Enter USCIS A-Number"
-                  {...register("uscisNumber", {
-                    required: "USCIS A-Number is required",
-                  })}
-                  className={inputClass}
-                />
-              </div>
-              {errors.uscisNumber && (
-                <p className="text-red-500 text-sm">
-                  {errors.uscisNumber.message}
-                </p>
-              )}
-            </div>
-          )}
-
-          {citizenship === "Other Noncitizen" && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-              <div>
-                <label className="mb-1 block text-white">
-                  USCIS A-Number <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="text"
-                    placeholder="Enter USCIS A-Number"
-                    {...register("otherUscis", {
-                      required: "USCIS A-Number is required",
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors.otherUscis && (
-                  <p className="text-red-500 text-sm">
-                    {errors.otherUscis.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1 block text-white">
-                  Form I-94 Admission Number{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="text"
-                    placeholder="Enter I-94 Number"
-                    {...register("i94Number", {
-                      required: "I-94 Admission Number is required",
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors.i94Number && (
-                  <p className="text-red-500 text-sm">
-                    {errors.i94Number.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="mb-1 block text-white">
-                  Foreign Passport Number & Country{" "}
-                  <span className="text-red-500">*</span>
-                </label>
-                <div className={inputWrapperClass}>
-                  <input
-                    type="text"
-                    placeholder="Enter Passport Number"
-                    {...register("passportNumber", {
-                      required: "Passport Number is required",
-                    })}
-                    className={inputClass}
-                  />
-                </div>
-                {errors.passportNumber && (
-                  <p className="text-red-500 text-sm">
-                    {errors.passportNumber.message}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Signature & Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 mb-4">
-            <div className="mb-6">
-              <label className="block mb-3 text-white">
-                Employee Signature <span className="text-red-500">*</span>
-              </label>
-
-              {/* Signature Upload */}
-              {preview && (
-                <div className="mt-3 relative inline-block">
-                  <img
-                    src={preview}
-                    alt="Signature Preview"
-                    className="w-[200px] h-[80px] object-contain border rounded-md"
-                  />
-                </div>
-              )}
-
-              {errors.employeeSignature && (
-                <p className="text-red-500 text-sm mt-2">
-                  {errors.employeeSignature.message}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="mb-1 block text-white">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <div className={inputWrapperClass}>
-                <input
-                  type="date"
-                  {...register("signDate", { required: "Date is required" })}
-                  className={`${inputClass} py-3.5`}
-                />
-              </div>
-              {errors.signDate && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.signDate.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Submit & Navigation */}
-          <div className="flex justify-center mt-6 gap-4">
+        <form className="space-y-6">
+          {/* Download / Print Buttons */}
+          <div className="flex justify-center gap-6 my-10">
             <button
               type="button"
-              onClick={prevStep}
-              className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              onClick={handleDownload}
+              disabled={loadingType === "download"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
             >
-              Previous
+              {loadingType === "download" ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : (
+                <Download className="w-5 h-5" />
+              )}
+              {loadingType === "download" ? "Downloading…" : "Download I9 form"}
             </button>
 
             <button
-              type="submit"
-              className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
+              type="button"
+              onClick={handlePrint}
+              disabled={loadingType === "print"}
+              className="flex items-center gap-2 px-12 py-3 bg-[#946344] text-white text-lg font-medium rounded-md hover:opacity-90 disabled:opacity-70 transition"
             >
-              Next
+              {loadingType === "print" ? (
+                <Loader2 className="animate-spin w-5 h-5" />
+              ) : (
+                <Printer className="w-5 h-5" />
+              )}
+              {loadingType === "print" ? "Downloading" : "Example I9 form"}
             </button>
+          </div>
+
+          {/* ------------------- FILE UPLOAD AREA ------------------- */}
+          <div className="mt-12">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-3 border-dashed rounded-lg p-12 text-center transition-colors ${
+                isDragging
+                  ? "border-amber-600 bg-amber-500/5"
+                  : "border-amber-500/40"
+              }`}
+            >
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center">
+                  <Upload className="w-10 h-10 text-amber-600" />
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-semibold text-white mb-2">
+                    Upload Documents
+                  </h2>
+                  <p className="text-gray-400 mb-6">
+                    Drag & drop files here, or click to browse
+                  </p>
+                </div>
+
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="!bg-[#946344] hover:bg-amber-700 !text-white !px-9 !py-5 rounded-lg font-semibold"
+                >
+                  Choose File
+                </Button>
+
+                <p className="text-sm text-gray-400">
+                  Supports JPG, PNG, PDF – max 10 MB
+                </p>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+
+            {/* Global upload error */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm">
+                {error}
+              </div>
+            )}
+
+            {/* Uploaded files preview */}
+            {/* File Preview Section */}
+            {files.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+                {files.map((file, index) => {
+                  const fileURL = URL.createObjectURL(file);
+                  const isImage = file.type.startsWith("image/");
+                  const isPDF = file.type === "application/pdf";
+
+                  return (
+                    <div
+                      key={index}
+                      className="relative border rounded-md p-2 bg-white shadow-md"
+                    >
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+
+                      {isImage && (
+                        <img
+                          src={fileURL}
+                          alt={file.name}
+                          className="w-full h-32 object-contain rounded-md"
+                        />
+                      )}
+
+                      {isPDF && (
+                        <div
+                          className="w-full h-32 border rounded-md relative cursor-pointer hover:bg-gray-50"
+                          onClick={() => setSelectedPDF(fileURL)}
+                        >
+                          <iframe
+                            src={fileURL}
+                            title={file.name}
+                            className="w-full h-full transform scale-90 origin-top-left pointer-events-none"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                            <p className="text-black text-xl font-semibold flex items-center gap-3 bg-gray-300 p-3 rounded-md">
+                              <Eye size={22} /> View PDF
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-xs mt-2 truncate">{file.name}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* PDF Full View Modal */}
+          {selectedPDF && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white w-11/12 h-5/6 rounded-lg shadow-lg relative">
+                <button
+                  onClick={() => setSelectedPDF(null)}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                >
+                  <X size={18} />
+                </button>
+                <iframe
+                  src={selectedPDF}
+                  title="Full PDF"
+                  className="w-full h-full rounded-lg"
+                ></iframe>
+              </div>
+            </div>
+          )}
+
+          {/* ------------------- SUBMIT ------------------- */}
+          <div className="flex justify-center mt-12">
+            {/* Navigation */}
+            <div className="flex justify-center mt-10 gap-4">
+              <button
+                type="button"
+                onClick={prevStep}
+                className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={handleNext}
+                className="px-6 py-2 bg-gradient-to-r from-[#8D6851] to-[#D3BFB2] text-white rounded-md hover:opacity-90"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </form>
       </div>
