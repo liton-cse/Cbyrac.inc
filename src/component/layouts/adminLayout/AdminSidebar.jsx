@@ -52,10 +52,22 @@ const AdminSidebar = () => {
       path: "/admin/i9-form",
     },
     {
+      key: "I9 form example",
+      label: "Example I9 form ",
+      icon: <FormInput className="w-5 h-5" />,
+      path: "/admin/i9-form-example",
+    },
+    {
       key: "W4 form",
       label: "W4 form",
       icon: <FormInputIcon className="w-5 h-5" />,
       path: "/admin/w4-form",
+    },
+    {
+      key: "W4 form example",
+      label: "Example W4 form",
+      icon: <FormInputIcon className="w-5 h-5" />,
+      path: "/admin/w4-form-example",
     },
 
     {

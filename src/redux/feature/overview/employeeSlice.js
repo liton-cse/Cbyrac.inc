@@ -2,7 +2,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axiosInstance from "../../../utils/axiosInstance";
 
-// Async thunk to fetch employees by role and/or search
+// Fetch employees by role/search
 export const fetchEmployeesByRole = createAsyncThunk(
   "employee/fetchEmployees",
   async (
@@ -15,16 +15,12 @@ export const fetchEmployeesByRole = createAsyncThunk(
         limit,
         employee_role: employee_role || "Fit2Lead Intern",
       };
-
-      if (search) {
-        params.firstName = search;
-      }
+      if (search) params.firstName = search;
 
       const url = search ? "/user/search" : "/user/filter";
       const response = await axiosInstance.get(url, { params });
-      return response.data;
+      return response.data; // expect { data: [...], pagination: {...} }
     } catch (error) {
-      console.error("Fetch employees error:", error.response?.data);
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch employees"
       );
@@ -32,18 +28,19 @@ export const fetchEmployeesByRole = createAsyncThunk(
   }
 );
 
+// Update employee status
 export const updateEmployeeStatus = createAsyncThunk(
-  "employee/employee Status",
+  "employee/updateStatus",
   async ({ id, status }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.put(`/user/${id}/status`, {
         status,
       });
-      return response.data.data;
+      // return full employee object if backend provides it, else return id & status
+      return response.data.data || { _id: id, employee_status: status };
     } catch (error) {
-      console.error("Fetch employees error:", error.response?.data);
       return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch employees"
+        error.response?.data?.message || "Failed to update status"
       );
     }
   }
@@ -70,13 +67,12 @@ const employeeSlice = createSlice({
     updateStatusLocally: (state, action) => {
       const { id, status } = action.payload;
       const index = state.employees.findIndex((e) => e._id === id);
-      if (index !== -1) {
-        state.employees[index].employee_status = status;
-      }
+      if (index !== -1) state.employees[index].employee_status = status;
     },
   },
   extraReducers: (builder) => {
     builder
+      // Fetch Employees
       .addCase(fetchEmployeesByRole.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -90,18 +86,25 @@ const employeeSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      .addCase(updateEmployeeStatus.pending, (state) => {
+
+      // Update Employee Status
+      .addCase(updateEmployeeStatus.pending, (state, action) => {
         state.loading = true;
-        state.error = null;
         const id = action.meta.arg.id;
         state.pendingStatusUpdate[id] = true;
       })
       .addCase(updateEmployeeStatus.fulfilled, (state, action) => {
         state.loading = false;
-        const { id, status } = action.payload;
-        const index = state.employees.findIndex((e) => e._id === id);
-        if (index !== -1) state.employees[index].employee_status = status;
-        delete state.pendingStatusUpdate[id];
+        const updatedEmployee = action.payload;
+        const index = state.employees.findIndex(
+          (e) => e._id === updatedEmployee._id
+        );
+        if (index !== -1)
+          state.employees[index] = {
+            ...state.employees[index],
+            ...updatedEmployee,
+          };
+        delete state.pendingStatusUpdate[updatedEmployee._id];
       })
       .addCase(updateEmployeeStatus.rejected, (state, action) => {
         state.loading = false;

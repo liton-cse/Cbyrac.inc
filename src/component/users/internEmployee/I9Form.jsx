@@ -15,6 +15,7 @@ import { internTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchI9Forms } from "../../../redux/feature/adminI9Form/adminI9FormSlice";
 import { VITE_BASE_URL } from "../../../config";
+import { fetchI9FormsExample } from "../../../redux/feature/adminI9Form/adminI9ExampleForm";
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -31,7 +32,6 @@ const I9Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
   const dispatch = useDispatch();
   const {
     trigger,
@@ -41,6 +41,7 @@ const I9Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   } = useForm();
 
   const { forms } = useSelector((state) => state.I9Form);
+  const { form } = useSelector((state) => state.I9FormExample);
   console.log("pdf", forms?.image?.[0]);
   const [selectedPDF, setSelectedPDF] = useState(null);
   /* --------------------------------------------------------------- */
@@ -50,6 +51,7 @@ const I9Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   useEffect(() => {
     const loadData = async () => {
       await dispatch(fetchI9Forms());
+      await dispatch(fetchI9FormsExample());
     };
 
     loadData();
@@ -165,15 +167,28 @@ const I9Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   };
 
   const handlePrint = async () => {
-    setLoadingType("print");
-    const win = window.open(pdfUrl, "_blank");
-    if (win) {
-      win.onload = () => win.print();
-    } else {
-      alert("Please allow pop-ups to print the timesheet.");
+    setLoadingType("download");
+
+    try {
+      const response = await fetch(`${VITE_BASE_URL}/${form?.image?.[0]}`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Timesheet.pdf"; // file name
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Failed to download the PDF file!");
+    } finally {
+      setLoadingType(null);
     }
-    await new Promise((r) => setTimeout(r, 800));
-    setLoadingType(null);
   };
 
   /* --------------------------------------------------------------- */

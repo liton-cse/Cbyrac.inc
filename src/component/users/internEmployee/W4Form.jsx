@@ -15,6 +15,7 @@ import { internTimeSheetApi } from "../../../redux/employeeApi/temporaryApi";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchW4Forms } from "../../../redux/feature/adminW4Form/W4FormSlice";
 import { VITE_BASE_URL } from "../../../config";
+import { fetchW4FormsExample } from "../../../redux/feature/adminW4Form/W4FprmExampleSlice";
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -31,9 +32,8 @@ const W4Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
-  const pdfUrl = "/Cbyrac_ Inc F2L timesheet (Fillable).pdf";
-
   const { forms } = useSelector((state) => state.W4Form);
+  const { form } = useSelector((state) => state.W4FormExample);
   const [selectedPDF, setSelectedPDF] = useState(null);
   const {
     trigger,
@@ -48,6 +48,7 @@ const W4Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   useEffect(() => {
     const loadData = async () => {
       await dispatch(fetchW4Forms());
+      await dispatch(fetchW4FormsExample());
     };
 
     loadData();
@@ -164,15 +165,28 @@ const W4Form = ({ prevStep, nextStep, step, setFormData, preview, data }) => {
   };
 
   const handlePrint = async () => {
-    setLoadingType("print");
-    const win = window.open(pdfUrl, "_blank");
-    if (win) {
-      win.onload = () => win.print();
-    } else {
-      alert("Please allow pop-ups to print the timesheet.");
+    setLoadingType("download");
+
+    try {
+      const response = await fetch(`${VITE_BASE_URL}/${form?.image?.[0]}`);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Timesheet.pdf"; // file name
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert("Failed to download the PDF file!");
+    } finally {
+      setLoadingType(null);
     }
-    await new Promise((r) => setTimeout(r, 800));
-    setLoadingType(null);
   };
 
   /* --------------------------------------------------------------- */

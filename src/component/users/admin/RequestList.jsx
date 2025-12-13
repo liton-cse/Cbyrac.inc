@@ -14,6 +14,7 @@ import {
   updateEmployeeStatus,
   updateStatusLocally,
 } from "../../../redux/feature/overview/employeeSlice";
+import axiosInstance from "../../../utils/axiosInstance";
 
 // Status colors for tags
 const statusColors = {
@@ -80,24 +81,27 @@ const RequestList = () => {
   }, [dispatch, currentTab, currentPage, search]);
 
   // Action handler
-  const handleAction = (actionType, employee) => {
-    console.log(employee);
-
+  const handleAction = async (actionType, employee) => {
     switch (actionType) {
       case "view":
         console.log("View employee", employee);
         break;
 
       case "approve":
-        console.log("Approve employee", employee._id);
+        console.log(actionType);
         dispatch(updateStatusLocally({ id: employee._id, status: "approve" }));
-        dispatch(updateEmployeeStatus({ id: employee._id, status: "approve" }));
+        dispatch(
+          updateEmployeeStatus({ id: employee._id, status: actionType })
+        );
         break;
 
       case "reject":
-        console.log("Reject employee", employee._id);
+        console.log(actionType);
+        console.log(employee._id);
         dispatch(updateStatusLocally({ id: employee._id, status: "reject" }));
-        dispatch(updateEmployeeStatus({ id: employee._id, status: "reject" }));
+        dispatch(
+          updateEmployeeStatus({ id: employee._id, status: actionType })
+        );
         break;
 
       case "download":

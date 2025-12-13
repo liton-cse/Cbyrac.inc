@@ -29,6 +29,8 @@ import InternPdfViewer from "../component/users/internEmployee/InternPdf";
 import AdminTimeSheetUp from "../component/users/admin/adminTimeSheetUp/AdminTimeSheetUp";
 import AdminI9Form from "../component/users/admin/adminI9Form/AdminI9Form";
 import Adminw4Form from "../component/users/admin/adminW4Form/AdminW4Form";
+import AdminI9FormExample from "../component/users/admin/adminI9Form/AdminI9formExamole";
+import AdminW4FormExample from "../component/users/admin/adminW4Form/AdminW4FormExamaple";
 
 const router = createBrowserRouter([
   // Public routes
@@ -119,6 +121,8 @@ const router = createBrowserRouter([
           { path: "time-sheet-form", element: <AdminTimeSheetUp /> },
           { path: "i9-form", element: <AdminI9Form /> },
           { path: "w4-form", element: <Adminw4Form /> },
+          { path: "i9-form-example", element: <AdminI9FormExample /> },
+          { path: "w4-form-example", element: <AdminW4FormExample /> },
         ],
       },
     ],
